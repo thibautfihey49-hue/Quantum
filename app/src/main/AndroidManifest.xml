@@ -6,15 +6,11 @@
     <application
         android:label="V7-QUANTUM-FAST"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-            <!-- Pour apparaître dans la liste + bouton OUVRIR -->
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Pour devenir launcher principal -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
