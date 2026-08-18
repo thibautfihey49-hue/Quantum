@@ -1,33 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000000">
-    <ImageView android:id="@+id/wallpaperView" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:layerType="none"/>
+    <ImageView android:id="@+id/wallpaperView" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop"/>
     <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="52dp" android:paddingBottom="190dp" android:paddingLeft="14dp" android:paddingRight="14dp" android:overScrollMode="never" android:fillViewport="true">
         <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
-            <FrameLayout android:layout_width="match_parent" android:layout_height="132dp" android:background="@drawable/glass_main" android:padding="18dp">
-                <TextView android:id="@+id/clock" android:text="00:10" android:textColor="#FFF" android:textSize="44sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/date" android:text="MER. 19 AOÛT • Paris" android:textColor="#E6FFFFFF" android:textSize="12sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/btnMenu" android:text="⋮" android:textSize="18sp" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_gravity="top|end" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
+            <FrameLayout android:id="@+id/glassClock" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/glass_main" android:padding="18dp">
+                <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+                        <TextView android:id="@+id/clock" android:text="00:29" android:textColor="#FFF" android:textSize="44sp" android:fontFamily="sans-serif-light" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+                        <TextView android:id="@+id/btnMenu" android:text="⋮" android:textSize="18sp" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
+                    </LinearLayout>
+                    <TextView android:id="@+id/date" android:text="MER. 19 AOÛT • Paris" android:textColor="#E6FFFFFF" android:textSize="12sp" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                    <LinearLayout android:orientation="horizontal" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+                        <TextView android:id="@+id/batteryInfo" android:text="🔋 100%" android:textColor="#FFF" android:textSize="11sp" android:background="@drawable/btn_glass" android:padding="6dp" android:layout_marginRight="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                        <TextView android:id="@+id/weatherInfo" android:text="☀️ --°" android:textColor="#FFF" android:textSize="11sp" android:background="@drawable/btn_glass" android:padding="6dp" android:layout_marginRight="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                        <TextView android:id="@+id/alarmInfo" android:text="⏰ --" android:textColor="#FFF" android:textSize="11sp" android:background="@drawable/btn_glass" android:padding="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                    </LinearLayout>
+                </LinearLayout>
             </FrameLayout>
-            <FrameLayout android:layout_width="match_parent" android:layout_height="54dp" android:background="@drawable/search_glass" android:layout_marginTop="16dp" android:paddingLeft="14dp" android:paddingRight="8dp">
+            <FrameLayout android:id="@+id/glassSearch" android:layout_width="match_parent" android:layout_height="54dp" android:background="@drawable/search_glass" android:layout_marginTop="16dp" android:paddingLeft="14dp" android:paddingRight="8dp">
                 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
                     <TextView android:text="🔍" android:textSize="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                     <EditText android:id="@+id/searchAppsMain" android:hint="Rechercher apps..." android:textColor="#FFF" android:textColorHint="#88FFFFFF" android:background="@android:color/transparent" android:singleLine="true" android:layout_marginLeft="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent"/>
                     <TextView android:id="@+id/clearApps" android:text="✕" android:textColor="#88FFFFFF" android:visibility="gone" android:padding="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </LinearLayout>
             </FrameLayout>
-            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSuggestions" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:background="@drawable/glass_main" android:padding="8dp" android:layout_marginTop="8dp" android:nestedScrollingEnabled="false" android:overScrollMode="never"/>
-            <FrameLayout android:layout_width="match_parent" android:layout_height="54dp" android:background="@drawable/glass_main" android:layout_marginTop="12dp" android:paddingLeft="14dp" android:paddingRight="8dp">
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSuggestions" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:background="@drawable/glass_main" android:padding="8dp" android:layout_marginTop="8dp" android:nestedScrollingEnabled="false"/>
+            <FrameLayout android:id="@+id/glassWeb" android:layout_width="match_parent" android:layout_height="54dp" android:background="@drawable/glass_main" android:layout_marginTop="12dp" android:paddingLeft="14dp" android:paddingRight="8dp">
                 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
                     <TextView android:text="🌐" android:textSize="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                    <EditText android:id="@+id/searchWebMain" android:hint="Rechercher sur internet..." android:textColor="#FFF" android:textColorHint="#88FFFFFF" android:background="@android:color/transparent" android:singleLine="true" android:imeOptions="actionSearch" android:layout_marginLeft="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent"/>
-                    <TextView android:id="@+id/btnWebGo" android:text="➤" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_marginLeft="8dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
+                    <EditText android:id="@+id/searchWebMain" android:hint="yt Luffy, g, d, w..." android:textColor="#FFF" android:textColorHint="#88FFFFFF" android:background="@android:color/transparent" android:singleLine="true" android:imeOptions="actionSearch" android:layout_marginLeft="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent"/>
+                    <TextView android:id="@+id/btnVoice" android:text="🎤" android:textSize="14sp" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_marginLeft="4dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
+                    <TextView android:id="@+id/btnWebGo" android:text="➤" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_marginLeft="4dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
                 </LinearLayout>
             </FrameLayout>
             <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
                 <TextView android:text="⭐ Favoris" android:textColor="#FFF" android:textSize="13sp" android:textStyle="bold" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/btnAddFav" android:text="+ Ajouter site" android:textColor="#FFF" android:textSize="11sp" android:background="@drawable/btn_glass" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingTop="6dp" android:paddingBottom="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/btnAddFav" android:text="+ Site" android:textColor="#FFF" android:textSize="11sp" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_marginRight="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/btnAddFolder" android:text="📁 Dossier" android:textColor="#FFF" android:textSize="11sp" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </LinearLayout>
-            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvFavorites" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:nestedScrollingEnabled="false" android:overScrollMode="never"/>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvFavorites" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:nestedScrollingEnabled="false"/>
+            <TextView android:text="📁 Mes dossiers" android:textColor="#FFF" android:textSize="13sp" android:textStyle="bold" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvFolders" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:nestedScrollingEnabled="false"/>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
     <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingBottom="72dp">

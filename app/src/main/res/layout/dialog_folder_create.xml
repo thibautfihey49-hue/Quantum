@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="320dp" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/dialog_glass" android:padding="18dp">
+    <TextView android:text="Nouveau dossier" android:textColor="#FFF" android:textSize="16sp" android:textStyle="bold" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <EditText android:id="@+id/folderName" android:hint="Nom du dossier" android:textColor="#000" android:textColorHint="#88000000" android:background="@drawable/edit_white" android:padding="14dp" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/folderAppList" android:layout_width="match_parent" android:layout_height="300dp" android:layout_marginTop="12dp"/>
+    <LinearLayout android:orientation="horizontal" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+        <TextView android:id="@+id/bCancel" android:text="Annuler" android:textColor="#FFF" android:background="@drawable/btn_glass" android:gravity="center" android:padding="10dp" android:layout_weight="1" android:layout_marginRight="6dp" android:layout_width="0dp" android:layout_height="wrap_content"/>
+        <TextView android:id="@+id/bCreate" android:text="Créer" android:textColor="#FFF" android:background="@drawable/btn_glass" android:gravity="center" android:padding="10dp" android:layout_weight="1" android:layout_marginLeft="6dp" android:layout_width="0dp" android:layout_height="wrap_content"/>
+    </LinearLayout>
+</LinearLayout>
