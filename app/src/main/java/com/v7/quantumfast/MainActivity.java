@@ -2,9 +2,11 @@ package com.v7.quantumfast;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import com.google.android.gms.auth.api.signin.*;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.Scope;
-import com.google.api.services.gmail.GmailScopes;
 
 public class MainActivity extends Activity {
     public static final int RC_SIGN_IN = 1001;
@@ -14,9 +16,9 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         setContentView(R.layout.activity_main);
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-          .requestEmail()
-          .requestScopes(new Scope(GmailScopes.GMAIL_READONLY))
-          .build();
+         .requestEmail()
+         .requestScopes(new Scope("https://www.googleapis.com/auth/gmail.readonly"))
+         .build();
         gClient = GoogleSignIn.getClient(this, gso);
         if(b==null) getFragmentManager().beginTransaction().replace(R.id.mainContainer, new Page3Fragment()).commit();
     }
@@ -25,7 +27,6 @@ public class MainActivity extends Activity {
     @Override protected void onActivityResult(int rc,int res, Intent data){
         super.onActivityResult(rc,res,data);
         if(rc==RC_SIGN_IN || rc==RC_AUTH){
-            // relance le fragment qui va refaire updateGmailAuto
             Page3Fragment f = (Page3Fragment)getFragmentManager().findFragmentById(R.id.mainContainer);
             if(f!=null) f.onResume();
         }

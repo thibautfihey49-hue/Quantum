@@ -7,9 +7,9 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.*;
 import android.widget.*;
-import com.google.android.gms.auth.GoogleAuthUtil;
-import com.google.android.gms.auth.UserRecoverableAuthException;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.UserRecoverableAuthException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -52,7 +52,7 @@ public class Page3Fragment extends Fragment {
                 if(getActivity()==null) return;
                 GoogleSignInAccount acc = GoogleSignIn.getLastSignedInAccount(getActivity());
                 if(acc==null){
-                    getActivity().runOnUiThread(()->{ TextView cnt=mailView.findViewById(R.id.txtMailCount); if(cnt!=null) cnt.setText("Connecter"); });
+                    getActivity().runOnUiThread(()->{ TextView cnt=mailView.findViewById(R.id.txtMailCount); if(cnt!=null) cnt.setText("Connecter"); TextView t1=mailView.findViewById(R.id.txtMail1); if(t1!=null) t1.setText("• Clique pour connecter Gmail auto-sync"); });
                     return;
                 }
                 String email = acc.getEmail();
@@ -62,7 +62,7 @@ public class Page3Fragment extends Fragment {
                 if(getActivity()==null) return;
                 getActivity().runOnUiThread(()->{
                     TextView cnt=mailView.findViewById(R.id.txtMailCount); if(cnt!=null) cnt.setText(unread>0?unread+" non lus":"0 non lu");
-                    if(mails.size()>0){ TextView t1=mailView.findViewById(R.id.txtMail1); if(t1!=null) t1.setText("• "+mails.get(0).subject); TextView t2b=mailView.findViewById(R.id.txtMail2); if(t2b!=null) t2b.setText("De: "+mails.get(0).from); }
+                    if(mails.size()>0){ TextView t1=mailView.findViewById(R.id.txtMail1); if(t1!=null) t1.setText("• "+mails.get(0).subject); TextView t2=mailView.findViewById(R.id.txtMail2); if(t2!=null) t2.setText("De: "+mails.get(0).from); }
                     if(mails.size()>1){ TextView t3=mailView.findViewById(R.id.txtMail3); if(t3!=null) t3.setText("• "+mails.get(1).subject); }
                 });
             }catch(UserRecoverableAuthException e){
