@@ -1,8 +1,8 @@
 package com.v7.quantumfast;
 import android.content.Context;
-import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.google.api.services.gmail.model.*;
@@ -12,7 +12,7 @@ public class GmailHelper {
     public static Gmail getService(Context ctx, String email){
         GoogleAccountCredential cred = GoogleAccountCredential.usingOAuth2(ctx, Collections.singleton(GmailScopes.GMAIL_READONLY));
         cred.setSelectedAccountName(email);
-        return new Gmail.Builder(AndroidHttp.newCompatibleTransport(), JacksonFactory.getDefaultInstance(), cred).setApplicationName("V7-QUANTUM-FAST").build();
+        return new Gmail.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance(), cred).setApplicationName("V7-QUANTUM-FAST").build();
     }
     public static class MailItem { public String subject, from; public MailItem(String s,String f){subject=s; from=f;} }
     public static List<MailItem> fetchInbox(Context ctx, String email) throws Exception {
