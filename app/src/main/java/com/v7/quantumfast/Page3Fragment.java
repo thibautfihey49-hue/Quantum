@@ -1,5 +1,4 @@
 package com.v7.quantumfast;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.*;
@@ -7,61 +6,57 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 public class Page3Fragment extends Fragment {
-    LinearLayout container;
     @Override public View onCreateView(@NonNull LayoutInflater inf, ViewGroup p, Bundle b){
         View root=inf.inflate(R.layout.fragment_page3,p,false);
-        container=root.findViewById(R.id.widgetContainer);
+        LinearLayout container=root.findViewById(R.id.widgetContainer);
 
-        // 21:09 header déjà dans layout
-        // Widgets drag
-        addDrag(inf.inflate(R.layout.widget_family, container, false));
-        addDrag(inf.inflate(R.layout.widget_piscine, container, false));
-        addDrag(createSearchBar());
-        addDrag(createDock());
+        // 1. Family
+        View fam=inf.inflate(R.layout.widget_family, container, false);
+        container.addView(wrapDrag(fam));
+
+        // 2. Piscine
+        View pis=inf.inflate(R.layout.widget_piscine, container, false);
+        container.addView(wrapDrag(pis));
+
+        // 3. Search
+        container.addView(wrapDrag(createSearch()));
+
+        // 4. Dock
+        container.addView(wrapDrag(createDock()));
 
         return root;
     }
 
-    void addDrag(View content){
+    DragResizeLayout wrapDrag(View content){
         DragResizeLayout drag=new DragResizeLayout(getContext());
         drag.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         drag.setPadding(0,0,0,12);
         drag.addView(content);
-        container.addView(drag);
+        return drag;
     }
 
-    View createSearchBar(){
-        androidx.cardview.widget.CardView card=new androidx.cardview.widget.CardView(getContext());
-        card.setRadius(24); card.setCardElevation(2);
-        LinearLayout l=new LinearLayout(getContext()); l.setOrientation(LinearLayout.HORIZONTAL); l.setPadding(20,16,20,16);
-        TextView t=new TextView(getContext()); t.setText("🔍 Rechercher apps + web..."); t.setTextColor(0xFF888888); t.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT,1));
-        TextView plus=new TextView(getContext()); plus.setText("+ Nouvelle page"); plus.setTextSize(11);
-        l.addView(t); l.addView(plus); card.addView(l);
-        return card;
+    View createSearch(){
+        androidx.cardview.widget.CardView c=new androidx.cardview.widget.CardView(getContext());
+        c.setRadius(24); c.setCardElevation(0); c.setCardBackgroundColor(0xFFEFEFF0);
+        LinearLayout l=new LinearLayout(getContext()); l.setOrientation(LinearLayout.HORIZONTAL); l.setPadding(16,14,16,14); l.setGravity(Gravity.CENTER_VERTICAL);
+        TextView s=new TextView(getContext()); s.setText("🔍 Rechercher apps + web..."); s.setTextColor(0xFF8E8E93); s.setLayoutParams(new LinearLayout.LayoutParams(0,-2,1)); s.setTextSize(13);
+        TextView n=new TextView(getContext()); n.setText("+ Nouvelle page"); n.setTextSize(11); n.setTextColor(0xFF8E8E93);
+        l.addView(s); l.addView(n); c.addView(l); return c;
     }
 
     View createDock(){
-        androidx.cardview.widget.CardView card=new androidx.cardview.widget.CardView(getContext());
-        card.setRadius(20); card.setCardElevation(0); card.setCardBackgroundColor(0xFFF5F5F5);
-        LinearLayout dock=new LinearLayout(getContext()); dock.setOrientation(LinearLayout.HORIZONTAL); dock.setGravity(Gravity.CENTER); dock.setPadding(8,12,8,12);
+        androidx.cardview.widget.CardView card=new androidx.cardview.widget.CardView(getContext()); card.setRadius(22); card.setCardElevation(0); card.setCardBackgroundColor(0xFFFFFFFF);
+        LinearLayout dock=new LinearLayout(getContext()); dock.setOrientation(LinearLayout.HORIZONTAL); dock.setPadding(8,12,8,4); dock.setGravity(Gravity.CENTER);
         String[] names={"Téléphone","Messages","Maps","Photos","Réglages","Musique"};
-        String[] icons={"📞","💬","🗺️","🌸","⚙️","🎵"};
+        String[] emojis={"📞","💬","📍","🌸","⚙️","🎵"};
         for(int i=0;i<names.length;i++){
-            LinearLayout item=new LinearLayout(getContext()); item.setOrientation(LinearLayout.VERTICAL); item.setGravity(Gravity.CENTER); item.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT,1));
-            TextView ic=new TextView(getContext()); ic.setText(icons[i]); ic.setTextSize(22); ic.setGravity(Gravity.CENTER);
-            TextView tv=new TextView(getContext()); tv.setText(names[i]); tv.setTextSize(9); tv.setGravity(Gravity.CENTER);
-            item.addView(ic); item.addView(tv);
-            final int idx=i;
-            item.setOnClickListener(v->{
-                try{
-                    if(idx==0) startActivity(new Intent(Intent.ACTION_DIAL));
-                    else if(idx==1) startActivity(getContext().getPackageManager().getLaunchIntentForPackage("com.google.android.apps.messaging"));
-                    else if(idx==2) startActivity(getContext().getPackageManager().getLaunchIntentForPackage("com.google.android.apps.maps"));
-                }catch(Exception e){}
-            });
-            dock.addView(item);
+            LinearLayout col=new LinearLayout(getContext()); col.setOrientation(LinearLayout.VERTICAL); col.setGravity(Gravity.CENTER); col.setLayoutParams(new LinearLayout.LayoutParams(0,-2,1));
+            TextView bg=new TextView(getContext()); bg.setText(emojis[i]); bg.setTextSize(20); bg.setGravity(Gravity.CENTER);
+            bg.setBackgroundResource(i==0?R.drawable.bg_circle_green:i==1?R.drawable.bg_circle_blue:R.drawable.bg_circle_gray);
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(48,48); bg.setLayoutParams(lp);
+            TextView tv=new TextView(getContext()); tv.setText(names[i]); tv.setTextSize(9); tv.setGravity(Gravity.CENTER); tv.setPadding(0,4,0,0);
+            col.addView(bg); col.addView(tv); dock.addView(col);
         }
-        card.addView(dock);
-        return card;
+        card.addView(dock); return card;
     }
 }
