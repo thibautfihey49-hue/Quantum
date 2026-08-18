@@ -2,7 +2,24 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.v7.quantumfast'
     compileSdk 34
-    defaultConfig { applicationId "com.v7.quantumfast"; minSdk 26; targetSdk 34; versionCode 12; versionName "GLASS-INFINITY-100T" }
-    buildTypes { debug { minifyEnabled false } release { minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
+    defaultConfig { 
+        applicationId "com.v7.quantumfast"
+        minSdk 26
+        targetSdk 34
+        versionCode 13
+        versionName "GLASS-INFINITY-100T-FIXED"
+    }
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
 }
-dependencies { implementation 'androidx.recyclerview:recyclerview:1.3.2' }
+dependencies { 
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+}
