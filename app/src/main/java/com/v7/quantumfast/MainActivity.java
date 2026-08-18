@@ -6,80 +6,66 @@ public class MainActivity extends Activity {
     List<ResolveInfo> cache = Collections.synchronizedList(new ArrayList<>()); Map<String,Drawable> iconCache = new ConcurrentHashMap<>(); long lastClick=0;
     SharedPreferences prefs; String[] dockKeys={"dock_0","dock_1","dock_2","dock_3","dock_4","dock_5"}; String[] defaultPkgs={"com.android.dialer","com.google.android.gm","com.android.calendar","", "com.android.camera2","com.android.chrome"};
     int pendingWidgetId=-1; AppWidgetProviderInfo pendingInfo;
-
-    String[] ALL_PERMS = {
-        android.Manifest.permission.READ_MEDIA_IMAGES,
-        android.Manifest.permission.READ_MEDIA_VIDEO,
-        android.Manifest.permission.READ_EXTERNAL_STORAGE,
-        android.Manifest.permission.GET_ACCOUNTS,
-        android.Manifest.permission.READ_CONTACTS,
-        android.Manifest.permission.READ_CALENDAR,
-        android.Manifest.permission.READ_CALL_LOG,
-        android.Manifest.permission.ACCESS_FINE_LOCATION,
-        android.Manifest.permission.ACCESS_COARSE_LOCATION,
-        android.Manifest.permission.CAMERA,
-        android.Manifest.permission.RECORD_AUDIO,
-        android.Manifest.permission.POST_NOTIFICATIONS
-    };
+    String[] ALL_PERMS={android.Manifest.permission.READ_MEDIA_IMAGES, android.Manifest.permission.READ_MEDIA_VIDEO, android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.GET_ACCOUNTS, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS};
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
+        // EDGE TO EDGE VRAI - plus de barre noire
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS | WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
         getWindow().setStatusBarColor(Color.TRANSPARENT); getWindow().setNavigationBarColor(Color.TRANSPARENT);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER); getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         setContentView(R.layout.activity_main);
         wallpaperView=findViewById(R.id.wallpaperView); container=findViewById(R.id.widgetContainer); addHint=findViewById(R.id.addWidgetHint);
-        prefs=getSharedPreferences("dock",0); mgr=AppWidgetManager.getInstance(this); host=new AppWidgetHost(this,1024); host.startListening();
+        prefs=getSharedPreferences("dock",0); mgr=AppWidgetManager.getInstance(this); host=new AppWidgetHost(this,1024);
+        // HOST TOUJOURS ACTIF - c'est ça qui charge les données Gmail/météo
+        host.startListening();
         preload(); clock(); setupDock(); loadSavedWallpaper();
         main.postDelayed(()->checkAndRequestAll(), 500);
         main.postDelayed(()->{ if(!isDefaultLauncher()) showDefaultLauncherDialog(); }, 1200);
         findViewById(R.id.btnMenu).setOnClickListener(v->showHomeMenu()); addHint.setOnClickListener(v->showWidgetPickerSafe());
+        // restaure widgets sauvegardés
+        restoreWidgets();
     }
-
+    void restoreWidgets(){
+        // les widgets sont déjà dans le container après rotation, on force refresh
+        for(int i=0;i<container.getChildCount();i++){
+            View child=container.getChildAt(i);
+            if(child instanceof FrameLayout){
+                FrameLayout card=(FrameLayout)child;
+                if(card.getChildCount()>0 && card.getChildAt(0) instanceof AppWidgetHostView){
+                    AppWidgetHostView hv=(AppWidgetHostView)card.getChildAt(0);
+                    try{ mgr.notifyAppWidgetViewDataChanged(hv.getAppWidgetId(), android.R.id.list); }catch(Exception e){}
+                }
+            }
+        }
+    }
     boolean isDefaultLauncher(){
-        IntentFilter filter = new IntentFilter(Intent.ACTION_MAIN); filter.addCategory(Intent.CATEGORY_HOME);
-        List<IntentFilter> filters = new ArrayList<>(); filters.add(filter);
-        List<ComponentName> activities = new ArrayList<>();
-        getPackageManager().getPreferredActivities(filters, activities, null);
-        for(ComponentName cn: activities) if(getPackageName().equals(cn.getPackageName())) return true;
         Intent home = new Intent(Intent.ACTION_MAIN); home.addCategory(Intent.CATEGORY_HOME);
         ResolveInfo ri = getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY);
         return ri!=null && ri.activityInfo!=null && getPackageName().equals(ri.activityInfo.packageName);
     }
     void showDefaultLauncherDialog(){
         if(prefs.getBoolean("asked_default", false)) return;
-        new android.app.AlertDialog.Builder(this).setTitle("🏠 Mettre Quantum par défaut?").setMessage("Pour Gmail, widgets, fond One Piece et dock 6 icônes fonctionnent sans bug, tu dois mettre Quantum en launcher par défaut.").setPositiveButton("Définir maintenant", (d,w)->{
+        new android.app.AlertDialog.Builder(this).setTitle("🏠 Mettre Quantum par défaut?").setMessage("Obligatoire pour que Gmail et météo chargent leurs données.").setPositiveButton("Définir", (d,w)->{
             prefs.edit().putBoolean("asked_default", true).apply();
             try{ Intent i = new Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS); startActivity(i); }
-            catch(Exception e){ try{ Intent i=new Intent(android.provider.Settings.ACTION_HOME_SETTINGS); startActivity(i);}catch(Exception ee){ Toast.makeText(this,"Paramètres > Apps > App par défaut > Accueil",Toast.LENGTH_LONG).show(); } }
+            catch(Exception e){ try{ Intent i=new Intent(android.provider.Settings.ACTION_HOME_SETTINGS); startActivity(i);}catch(Exception ee){} }
         }).setNegativeButton("Plus tard", null).show();
     }
     void showDefaultLauncherDialogForce(){ prefs.edit().putBoolean("asked_default", false).apply(); showDefaultLauncherDialog(); prefs.edit().putBoolean("asked_default", false).apply(); }
-
     void checkAndRequestAll(){
         List<String> need=new ArrayList<>();
-        for(String perm: ALL_PERMS){
-            try{
-                if(Build.VERSION.SDK_INT>=33 && perm.equals(android.Manifest.permission.READ_EXTERNAL_STORAGE)) continue;
-                if(Build.VERSION.SDK_INT<33 && (perm.equals(android.Manifest.permission.READ_MEDIA_IMAGES) || perm.equals(android.Manifest.permission.READ_MEDIA_VIDEO) || perm.equals(android.Manifest.permission.POST_NOTIFICATIONS))) continue;
-                if(checkSelfPermission(perm)!=PackageManager.PERMISSION_GRANTED) need.add(perm);
-            }catch(Exception e){}
-        }
-        if(!need.isEmpty()){
-            new android.app.AlertDialog.Builder(this).setTitle("🔐 Autorisations requises").setMessage("Quantum a besoin de toutes les autorisations pour Gmail, widgets, météo, contacts, caméra, micro, localisation...").setPositiveButton("Autoriser tout", (d,w)-> requestPermissions(need.toArray(new String[0]), 999)).setNegativeButton("Plus tard", null).show();
-        }
+        for(String perm: ALL_PERMS){ try{ if(Build.VERSION.SDK_INT>=33 && perm.equals(android.Manifest.permission.READ_EXTERNAL_STORAGE)) continue; if(Build.VERSION.SDK_INT<33 && (perm.equals(android.Manifest.permission.READ_MEDIA_IMAGES) || perm.equals(android.Manifest.permission.READ_MEDIA_VIDEO) || perm.equals(android.Manifest.permission.POST_NOTIFICATIONS))) continue; if(checkSelfPermission(perm)!=PackageManager.PERMISSION_GRANTED) need.add(perm); }catch(Exception e){} }
+        if(!need.isEmpty()) requestPermissions(need.toArray(new String[0]), 999);
     }
-    @Override public void onRequestPermissionsResult(int rc,String[] p,int[] g){
-        int granted=0; for(int v:g) if(v==PackageManager.PERMISSION_GRANTED) granted++;
-        Toast.makeText(this, granted+"/"+p.length+" autorisations accordées", Toast.LENGTH_SHORT).show();
-        if(granted>0) preload();
-    }
-
+    @Override public void onRequestPermissionsResult(int rc,String[] p,int[] g){ Toast.makeText(this,"Permissions OK, relance widgets",Toast.LENGTH_SHORT).show(); restoreWidgets(); }
     void loadSavedWallpaper(){ String uriStr=prefs.getString("custom_wallpaper_uri",null); if(uriStr!=null){ try{ Uri u=Uri.parse(uriStr); wallpaperView.setImageURI(u);}catch(Exception e){} } }
-    void showHomeMenu(){ PopupMenu pm=new PopupMenu(this, findViewById(R.id.btnMenu)); pm.getMenu().add("🎨 Changer fond Quantum"); pm.getMenu().add("🖼 Changer fond système"); pm.getMenu().add("🧩 Ajouter widget"); pm.getMenu().add("🗂 Ouvrir tiroir"); pm.getMenu().add("🏠 Mettre par défaut"); pm.getMenu().add("🔐 Toutes les autorisations"); pm.setOnMenuItemClickListener(item->{ String t=item.getTitle().toString(); if(t.contains("Quantum")) pickWallpaperInternal(); else if(t.contains("système")) pickWallpaperSystem(); else if(t.contains("widget")) showWidgetPickerSafe(); else if(t.contains("défaut")) showDefaultLauncherDialogForce(); else if(t.contains("autorisations")) checkAndRequestAll(); else openDrawer(); return true; }); pm.show(); }
+    void showHomeMenu(){ PopupMenu pm=new PopupMenu(this, findViewById(R.id.btnMenu)); pm.getMenu().add("🎨 Changer fond Quantum"); pm.getMenu().add("🖼 Changer fond système"); pm.getMenu().add("🧩 Ajouter widget"); pm.getMenu().add("🗂 Ouvrir tiroir"); pm.getMenu().add("🏠 Mettre par défaut"); pm.getMenu().add("🔄 Recharger widgets"); pm.getMenu().add("🔐 Permissions"); pm.setOnMenuItemClickListener(item->{ String t=item.getTitle().toString(); if(t.contains("Quantum")) pickWallpaperInternal(); else if(t.contains("système")) pickWallpaperSystem(); else if(t.contains("widget")) showWidgetPickerSafe(); else if(t.contains("défaut")) showDefaultLauncherDialogForce(); else if(t.contains("Recharger")){ host.startListening(); restoreWidgets(); Toast.makeText(this,"Widgets rechargés",Toast.LENGTH_SHORT).show(); } else if(t.contains("Permissions")) checkAndRequestAll(); else openDrawer(); return true; }); pm.show(); }
     void pickWallpaperInternal(){ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("image/*"); i.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivityForResult(i,201); }
     void pickWallpaperSystem(){ Intent i=new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI); startActivityForResult(i,200); }
-    @Override protected void onStart(){super.onStart(); try{host.startListening();}catch(Exception e){}} @Override protected void onStop(){super.onStop(); try{host.stopListening();}catch(Exception e){}}
+    @Override protected void onStart(){super.onStart(); try{host.startListening();}catch(Exception e){}} @Override protected void onStop(){super.onStop(); /* NE PLUS STOPPER - garde données */ }
     boolean tap(){ long n=SystemClock.uptimeMillis(); if(n-lastClick<180) return false; lastClick=n; return true; }
     void clock(){ TextView c=findViewById(R.id.clock); TextView d=findViewById(R.id.date); SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE); SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE); Runnable r=new Runnable(){public void run(){ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); main.postDelayed(this,30000);} }; r.run(); }
     void preload(){ exec.execute(()->{ try{ PackageManager pm=getPackageManager(); Intent ii=new Intent(Intent.ACTION_MAIN,null); ii.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> l=pm.queryIntentActivities(ii,0); l.sort((a,bb)->a.loadLabel(pm).toString().compareToIgnoreCase(bb.loadLabel(pm).toString())); cache.clear(); cache.addAll(l); for(ResolveInfo ri:l){ try{ if(!iconCache.containsKey(ri.activityInfo.packageName)) iconCache.put(ri.activityInfo.packageName, ri.loadIcon(pm)); }catch(Exception e){} } main.post(()->setupDock()); }catch(Exception e){}}); }
@@ -88,7 +74,7 @@ public class MainActivity extends Activity {
     void updateDockIcon(ImageView iv, String pkg){ Drawable cd=iconCache.get(pkg); if(cd!=null){ iv.setImageDrawable(cd); return; } exec.execute(()->{ try{ Drawable d=getPackageManager().getApplicationIcon(pkg); iconCache.put(pkg,d); main.post(()->iv.setImageDrawable(d)); }catch(Exception e){}}); }
     void pickDockApp(int dockIdx){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.setContentView(R.layout.picker_dock); RecyclerView rv=dlg.findViewById(R.id.recyclerDock); rv.setHasFixedSize(true); rv.setLayoutManager(new GridLayoutManager(this,5)); List<ResolveInfo> list=new ArrayList<>(cache); rv.setAdapter(new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=list.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable d=iconCache.get(ri.activityInfo.packageName); if(d!=null) h.ic.setImageDrawable(d); h.itemView.setOnClickListener(v->{ prefs.edit().putString(dockKeys[dockIdx], ri.activityInfo.packageName).apply(); dlg.dismiss(); setupDock(); }); } public int getItemCount(){ return list.size(); } }); dlg.show(); }
     void showWidgetPickerSafe(){ try{ List<AppWidgetProviderInfo> providers=mgr.getInstalledProviders(); if(providers.isEmpty()){ Toast.makeText(this,"Aucun widget",Toast.LENGTH_SHORT).show(); return; } String[] names=new String[providers.size()]; for(int i=0;i<providers.size();i++){ try{ names[i]=providers.get(i).loadLabel(getPackageManager()); }catch(Exception e){ names[i]=providers.get(i).provider.getPackageName(); } } new android.app.AlertDialog.Builder(this).setTitle("Choisir widget").setItems(names,(d,which)->{ try{ AppWidgetProviderInfo inf=providers.get(which); pendingWidgetId=host.allocateAppWidgetId(); pendingInfo=inf; if(inf.configure!=null){ Intent cfg=new Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE); cfg.setComponent(inf.configure); cfg.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId); startActivityForResult(cfg,101); } else { boolean allowed=mgr.bindAppWidgetIdIfAllowed(pendingWidgetId, inf.provider); if(!allowed){ Intent bind=new Intent(AppWidgetManager.ACTION_APPWIDGET_BIND); bind.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId); bind.putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, inf.provider); startActivityForResult(bind,102); } else addWidgetDirect(pendingWidgetId, inf); } }catch(Exception e){ Toast.makeText(MainActivity.this,"Erreur: "+e.getMessage(),Toast.LENGTH_LONG).show(); } }).setNegativeButton("Annuler",null).show(); }catch(Exception e){ Toast.makeText(this,"Erreur picker: "+e.getMessage(),Toast.LENGTH_LONG).show(); } }
-    void addWidgetDirect(int wid, AppWidgetProviderInfo inf){ exec.execute(()->{ main.post(()->{ addHint.setVisibility(View.GONE); AppWidgetHostView hv=host.createView(this,wid,inf); hv.setAppWidget(wid,inf); FrameLayout card=new FrameLayout(this); card.setBackgroundResource(R.drawable.glass); card.setPadding(4,4,4,4); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,12); card.setLayoutParams(lp); card.setOnLongClickListener(vv->{ container.removeView(card); host.deleteAppWidgetId(wid); if(container.getChildCount()==0) addHint.setVisibility(View.VISIBLE); return true;}); card.addView(hv); container.addView(card,0);});});}
+    void addWidgetDirect(int wid, AppWidgetProviderInfo inf){ exec.execute(()->{ main.post(()->{ addHint.setVisibility(View.GONE); AppWidgetHostView hv=host.createView(this,wid,inf); hv.setAppWidget(wid,inf); try{ mgr.notifyAppWidgetViewDataChanged(wid, android.R.id.list); }catch(Exception e){} FrameLayout card=new FrameLayout(this); card.setBackgroundResource(R.drawable.glass); card.setPadding(4,4,4,4); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,12); card.setLayoutParams(lp); card.setOnLongClickListener(vv->{ container.removeView(card); host.deleteAppWidgetId(wid); if(container.getChildCount()==0) addHint.setVisibility(View.VISIBLE); return true;}); card.addView(hv); container.addView(card,0); main.postDelayed(()->{ try{ host.startListening(); mgr.notifyAppWidgetViewDataChanged(wid, android.R.id.list); hv.updateAppWidget(null); }catch(Exception e){} }, 800); });});}
     @Override protected void onActivityResult(int rc,int res,Intent data){ if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri uri=data.getData(); try{ getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri", uri.toString()).apply(); wallpaperView.setImageURI(uri); Toast.makeText(this,"Fond Quantum ✓",Toast.LENGTH_SHORT).show(); return; } if(rc==200 && res==RESULT_OK && data!=null && data.getData()!=null){ try{ Bitmap bmp=MediaStore.Images.Media.getBitmap(getContentResolver(), data.getData()); WallpaperManager.getInstance(this).setBitmap(bmp); Toast.makeText(this,"Fond système ✓",Toast.LENGTH_SHORT).show(); }catch(Exception e){} return; } if(rc==101 && res==RESULT_OK){ if(pendingWidgetId!=-1 && pendingInfo!=null) addWidgetDirect(pendingWidgetId, pendingInfo); pendingWidgetId=-1; return; } if(rc==102 && res==RESULT_OK){ if(pendingWidgetId!=-1 && pendingInfo!=null) addWidgetDirect(pendingWidgetId, pendingInfo); pendingWidgetId=-1; return; } }
     void openDrawer(){ if(!tap()) return; android.app.Dialog dlg=new android.app.Dialog(this,android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.getWindow().setStatusBarColor(Color.TRANSPARENT); dlg.getWindow().setNavigationBarColor(Color.TRANSPARENT); dlg.setContentView(R.layout.drawer); RecyclerView rv=dlg.findViewById(R.id.recycler); EditText s=dlg.findViewById(R.id.search); rv.setHasFixedSize(true); rv.setItemViewCacheSize(50); rv.setItemAnimator(null); rv.setLayoutManager(new GridLayoutManager(this,5)); List<ResolveInfo> filt=new ArrayList<>(cache); FastAdapter ad=new FastAdapter(filt,getPackageManager(),dlg); rv.setAdapter(ad); s.addTextChangedListener(new android.text.TextWatcher(){ Runnable run; public void beforeTextChanged(CharSequence a,int b,int c,int d){} public void afterTextChanged(android.text.Editable e){} public void onTextChanged(CharSequence q,int b,int c,int dd){ if(run!=null) main.removeCallbacks(run); run=()->exec.execute(()->{ String qq=q.toString().toLowerCase().trim(); List<ResolveInfo> r=new ArrayList<>(); if(qq.isEmpty()) r.addAll(cache); else for(ResolveInfo ri:cache) if(ri.loadLabel(getPackageManager()).toString().toLowerCase().contains(qq)) r.add(ri); main.post(()->{ filt.clear(); filt.addAll(r); ad.notifyDataSetChanged();});}); main.postDelayed(run,80); } }); dlg.findViewById(R.id.close).setOnClickListener(v->dlg.dismiss()); dlg.show(); }
     void launch(String pkg){ try{ Intent it=getPackageManager().getLaunchIntentForPackage(pkg); if(it!=null) startActivity(it);}catch(Exception e){} }
