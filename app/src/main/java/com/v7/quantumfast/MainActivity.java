@@ -6,22 +6,19 @@ public class MainActivity extends Activity {
     List<ResolveInfo> cache = Collections.synchronizedList(new ArrayList<>()); Map<String,Drawable> iconCache = new ConcurrentHashMap<>(); long lastClick=0;
     SharedPreferences prefs; String[] dockKeys={"dock_0","dock_1","dock_2","dock_3","dock_4","dock_5"}; String[] defaultPkgs={"com.android.dialer","com.google.android.gm","com.android.calendar","", "com.android.camera2","com.android.chrome"};
     int pendingWidgetId=-1; AppWidgetProviderInfo pendingInfo;
-
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
         getWindow().setStatusBarColor(Color.TRANSPARENT); getWindow().setNavigationBarColor(Color.TRANSPARENT);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER);
-        getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER); getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         setContentView(R.layout.activity_main);
         wallpaperView=findViewById(R.id.wallpaperView); container=findViewById(R.id.widgetContainer); addHint=findViewById(R.id.addWidgetHint);
         prefs=getSharedPreferences("dock",0); mgr=AppWidgetManager.getInstance(this); host=new AppWidgetHost(this,1024); host.startListening();
         preload(); clock(); setupDock(); loadSavedWallpaper();
         findViewById(R.id.btnMenu).setOnClickListener(v->showHomeMenu());
         addHint.setOnClickListener(v->showWidgetPickerSafe());
-        findViewById(R.id.root).setOnLongClickListener(v->{ showHomeMenu(); return true;});
     }
-    void loadSavedWallpaper(){ String uriStr=prefs.getString("custom_wallpaper_uri",null); if(uriStr!=null){ try{ Uri u=Uri.parse(uriStr); wallpaperView.setImageURI(u); }catch(Exception e){} } }
+    void loadSavedWallpaper(){ String uriStr=prefs.getString("custom_wallpaper_uri",null); if(uriStr!=null){ try{ Uri u=Uri.parse(uriStr); wallpaperView.setImageURI(u);}catch(Exception e){} } }
     void showHomeMenu(){ PopupMenu pm=new PopupMenu(this, findViewById(R.id.btnMenu)); pm.getMenu().add("🎨 Changer fond Quantum"); pm.getMenu().add("🖼 Changer fond système"); pm.getMenu().add("🧩 Ajouter widget"); pm.getMenu().add("🗂 Ouvrir tiroir"); pm.setOnMenuItemClickListener(item->{ String t=item.getTitle().toString(); if(t.contains("Quantum")) pickWallpaperInternal(); else if(t.contains("système")) pickWallpaperSystem(); else if(t.contains("widget")) showWidgetPickerSafe(); else openDrawer(); return true; }); pm.show(); }
     void pickWallpaperInternal(){ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("image/*"); i.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivityForResult(i,201); }
     void pickWallpaperSystem(){ Intent i=new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI); startActivityForResult(i,200); }
@@ -34,45 +31,28 @@ public class MainActivity extends Activity {
     void updateDockIcon(ImageView iv, String pkg){ Drawable cd=iconCache.get(pkg); if(cd!=null){ iv.setImageDrawable(cd); return; } exec.execute(()->{ try{ Drawable d=getPackageManager().getApplicationIcon(pkg); iconCache.put(pkg,d); main.post(()->iv.setImageDrawable(d)); }catch(Exception e){}}); }
     void pickDockApp(int dockIdx){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.setContentView(R.layout.picker_dock); RecyclerView rv=dlg.findViewById(R.id.recyclerDock); rv.setHasFixedSize(true); rv.setLayoutManager(new GridLayoutManager(this,5)); List<ResolveInfo> list=new ArrayList<>(cache); rv.setAdapter(new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=list.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable d=iconCache.get(ri.activityInfo.packageName); if(d!=null) h.ic.setImageDrawable(d); h.itemView.setOnClickListener(v->{ prefs.edit().putString(dockKeys[dockIdx], ri.activityInfo.packageName).apply(); dlg.dismiss(); setupDock(); }); } public int getItemCount(){ return list.size(); } }); dlg.show(); }
 
-    // NOUVEAU WIDGET PICKER SAFE - ne plante plus
     void showWidgetPickerSafe(){
         try{
             List<AppWidgetProviderInfo> providers=mgr.getInstalledProviders();
-            if(providers.isEmpty()){ Toast.makeText(this,"Aucun widget trouvé",Toast.LENGTH_SHORT).show(); return; }
-            android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen);
-            dlg.setContentView(R.layout.picker_dock);
-            TextView title=dlg.findViewById(R.id.recyclerDock).getRootView().findViewById(R.id.recyclerDock); // reuse
-            RecyclerView rv=dlg.findViewById(R.id.recyclerDock);
-            rv.setHasFixedSize(true); rv.setLayoutManager(new LinearLayoutManager(this));
-            rv.setAdapter(new RecyclerView.Adapter(){
-                class H extends RecyclerView.ViewHolder{ TextView t; ImageView ic; H(View v){super(v); t=v.findViewById(R.id.label); ic=v.findViewById(R.id.icon);} }
-                public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); }
-                public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){
-                    H h=(H)hh; AppWidgetProviderInfo inf=providers.get(pos);
-                    String label=inf.loadLabel(getPackageManager()); h.t.setText(label);
-                    try{ h.ic.setImageDrawable(inf.loadIcon(MainActivity.this, getResources().getDisplayMetrics().densityDpi)); }catch(Exception e){ h.ic.setImageResource(android.R.drawable.sym_def_app_icon); }
-                    h.itemView.setOnClickListener(v->{
-                        dlg.dismiss();
-                        try{
-                            pendingWidgetId=host.allocateAppWidgetId();
-                            pendingInfo=inf;
-                            if(inf.configure!=null){
-                                Intent cfg=new Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE); cfg.setComponent(inf.configure); cfg.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId); startActivityForResult(cfg,101);
-                            } else {
-                                boolean allowed=mgr.bindAppWidgetIdIfAllowed(pendingWidgetId, inf.provider);
-                                if(!allowed){
-                                    Intent bind=new Intent(AppWidgetManager.ACTION_APPWIDGET_BIND); bind.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId); bind.putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, inf.provider); startActivityForResult(bind,102);
-                                } else { addWidgetDirect(pendingWidgetId, inf); }
-                            }
-                        }catch(Exception e){ Toast.makeText(MainActivity.this,"Erreur widget: "+e.getMessage(),Toast.LENGTH_LONG).show(); }
-                    });
-                }
-                public int getItemCount(){ return providers.size(); }
-            });
-            dlg.show();
-        }catch(Exception e){
-            Toast.makeText(this,"Erreur picker: "+e.getMessage(),Toast.LENGTH_LONG).show();
-        }
+            if(providers.isEmpty()){ Toast.makeText(this,"Aucun widget dispo",Toast.LENGTH_SHORT).show(); return; }
+            String[] names=new String[providers.size()];
+            for(int i=0;i<providers.size();i++){ try{ names[i]=providers.get(i).loadLabel(getPackageManager()); }catch(Exception e){ names[i]=providers.get(i).provider.getPackageName(); } }
+            new android.app.AlertDialog.Builder(this).setTitle("Choisir un widget").setItems(names, (d,which)->{
+                try{
+                    AppWidgetProviderInfo inf=providers.get(which);
+                    pendingWidgetId=host.allocateAppWidgetId();
+                    pendingInfo=inf;
+                    if(inf.configure!=null){
+                        Intent cfg=new Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE); cfg.setComponent(inf.configure); cfg.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId); startActivityForResult(cfg,101);
+                    } else {
+                        boolean allowed=mgr.bindAppWidgetIdIfAllowed(pendingWidgetId, inf.provider);
+                        if(!allowed){
+                            Intent bind=new Intent(AppWidgetManager.ACTION_APPWIDGET_BIND); bind.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId); bind.putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, inf.provider); startActivityForResult(bind,102);
+                        } else addWidgetDirect(pendingWidgetId, inf);
+                    }
+                }catch(Exception e){ Toast.makeText(MainActivity.this,"Erreur: "+e.getMessage(),Toast.LENGTH_LONG).show(); }
+            }).setNegativeButton("Annuler",null).show();
+        }catch(Exception e){ Toast.makeText(this,"Erreur picker: "+e.getMessage(),Toast.LENGTH_LONG).show(); }
     }
     void addWidgetDirect(int wid, AppWidgetProviderInfo inf){ exec.execute(()->{ main.post(()->{ addHint.setVisibility(View.GONE); AppWidgetHostView hv=host.createView(this,wid,inf); hv.setAppWidget(wid,inf); FrameLayout card=new FrameLayout(this); card.setBackgroundResource(R.drawable.glass); card.setPadding(4,4,4,4); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,12); card.setLayoutParams(lp); card.setOnLongClickListener(vv->{ container.removeView(card); host.deleteAppWidgetId(wid); if(container.getChildCount()==0) addHint.setVisibility(View.VISIBLE); return true;}); card.addView(hv); container.addView(card,0);});});}
 
@@ -81,7 +61,6 @@ public class MainActivity extends Activity {
         if(rc==200 && res==RESULT_OK && data!=null && data.getData()!=null){ try{ Bitmap bmp=MediaStore.Images.Media.getBitmap(getContentResolver(), data.getData()); WallpaperManager.getInstance(this).setBitmap(bmp); Toast.makeText(this,"Fond système ✓",Toast.LENGTH_SHORT).show(); }catch(Exception e){} return; }
         if(rc==101 && res==RESULT_OK){ if(pendingWidgetId!=-1 && pendingInfo!=null) addWidgetDirect(pendingWidgetId, pendingInfo); pendingWidgetId=-1; return; }
         if(rc==102 && res==RESULT_OK){ if(pendingWidgetId!=-1 && pendingInfo!=null) addWidgetDirect(pendingWidgetId, pendingInfo); pendingWidgetId=-1; return; }
-        if(rc==100 && data!=null){ int wid=data.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,-1); AppWidgetProviderInfo inf=mgr.getAppWidgetInfo(wid); if(inf!=null) addWidgetDirect(wid,inf); }
     }
 
     void openDrawer(){ if(!tap()) return; android.app.Dialog dlg=new android.app.Dialog(this,android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.getWindow().setStatusBarColor(Color.TRANSPARENT); dlg.getWindow().setNavigationBarColor(Color.TRANSPARENT); dlg.setContentView(R.layout.drawer); RecyclerView rv=dlg.findViewById(R.id.recycler); EditText s=dlg.findViewById(R.id.search); rv.setHasFixedSize(true); rv.setItemViewCacheSize(50); rv.setItemAnimator(null); rv.setLayoutManager(new GridLayoutManager(this,5)); List<ResolveInfo> filt=new ArrayList<>(cache); FastAdapter ad=new FastAdapter(filt,getPackageManager(),dlg); rv.setAdapter(ad); s.addTextChangedListener(new android.text.TextWatcher(){ Runnable run; public void beforeTextChanged(CharSequence a,int b,int c,int d){} public void afterTextChanged(android.text.Editable e){} public void onTextChanged(CharSequence q,int b,int c,int dd){ if(run!=null) main.removeCallbacks(run); run=()->exec.execute(()->{ String qq=q.toString().toLowerCase().trim(); List<ResolveInfo> r=new ArrayList<>(); if(qq.isEmpty()) r.addAll(cache); else for(ResolveInfo ri:cache) if(ri.loadLabel(getPackageManager()).toString().toLowerCase().contains(qq)) r.add(ri); main.post(()->{ filt.clear(); filt.addAll(r); ad.notifyDataSetChanged();});}); main.postDelayed(run,80); } }); dlg.findViewById(R.id.close).setOnClickListener(v->dlg.dismiss()); dlg.show(); }
