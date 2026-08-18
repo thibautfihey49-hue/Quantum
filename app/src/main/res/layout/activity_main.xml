@@ -1,33 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#FF0A0A12">
-    <View android:layout_width="300dp" android:layout_height="300dp" android:layout_gravity="top|start" android:layout_marginTop="-80dp" android:layout_marginStart="-80dp" android:background="@drawable/glass_color" android:alpha="0.6"/>
-    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:clipToPadding="false" android:layout_marginTop="80dp" android:paddingBottom="120dp" android:overScrollMode="never">
-        <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp">
-            <!-- Clock large coloré -->
-            <FrameLayout android:layout_width="match_parent" android:layout_height="160dp" android:background="@drawable/glass_color" android:elevation="8dp" android:padding="24dp" android:layout_marginBottom="12dp">
-                <TextView android:id="@+id/clock" android:text="20:57" android:textColor="#FFF" android:textSize="48sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/date" android:text="MAR 18 AOÛT • Paris" android:textColor="#AAFFFFFF" android:textSize="12sp" android:layout_gravity="bottom" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#FF0A0A12" android:fitsSystemWindows="false">
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="56dp" android:paddingBottom="120dp" android:paddingLeft="12dp" android:paddingRight="12dp" android:overScrollMode="never">
+        <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+            <FrameLayout android:layout_width="match_parent" android:layout_height="150dp" android:background="@drawable/glass_color" android:padding="20dp" android:layout_marginBottom="12dp">
+                <TextView android:id="@+id/clock" android:text="21:32" android:textColor="#FFFFFF" android:textSize="44sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/date" android:text="MAR. 18 AOÛT • Paris" android:textColor="#BBFFFFFF" android:textSize="12sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </FrameLayout>
             <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
-                <FrameLayout android:layout_weight="1" android:layout_marginEnd="6dp" android:background="@drawable/glass_weather" android:padding="16dp" android:layout_width="0dp" android:layout_height="140dp" android:elevation="4dp">
-                    <TextView android:text="⛅" android:textSize="36sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                    <TextView android:text="18°&#10;Partly Cloudy" android:textColor="#FFF" android:layout_gravity="bottom" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <FrameLayout android:layout_weight="1" android:layout_marginEnd="6dp" android:background="@drawable/glass_weather" android:padding="16dp" android:layout_width="0dp" android:layout_height="130dp">
+                    <TextView android:text="⛅" android:textSize="32sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                    <TextView android:text="18°&#10;Partly Cloudy" android:textColor="#FFF" android:textSize="13sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </FrameLayout>
-                <FrameLayout android:layout_weight="1" android:layout_marginStart="6dp" android:background="@drawable/glass_clock" android:padding="16dp" android:layout_width="0dp" android:layout_height="140dp" android:elevation="4dp">
-                    <TextView android:text="◷" android:textSize="36sp" android:textColor="#FFF" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                    <TextView android:text="Clock&#10;Tue, Oct 15" android:textColor="#FFF" android:layout_gravity="bottom" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <FrameLayout android:layout_weight="1" android:layout_marginStart="6dp" android:background="@drawable/glass_clock" android:padding="16dp" android:layout_width="0dp" android:layout_height="130dp">
+                    <TextView android:text="◷" android:textSize="28sp" android:textColor="#FFF" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                    <TextView android:text="Clock&#10;Tue, Oct 15" android:textColor="#FFF" android:textSize="13sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </FrameLayout>
             </LinearLayout>
             <LinearLayout android:id="@+id/widgetContainer" android:orientation="vertical" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
         </LinearLayout>
     </ScrollView>
-    <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:padding="12dp">
-        <LinearLayout android:background="@drawable/glass" android:orientation="horizontal" android:gravity="center" android:padding="10dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:elevation="12dp">
-            <ImageView android:id="@+id/dPhone" android:src="@android:drawable/ic_menu_call" android:tint="#FF5A8CFF" android:padding="10dp" android:layout_margin="6dp" android:layout_width="48dp" android:layout_height="48dp"/>
-            <ImageView android:id="@+id/dMsg" android:src="@android:drawable/ic_dialog_email" android:tint="#FF50E3C6" android:padding="10dp" android:layout_margin="6dp" android:layout_width="48dp" android:layout_height="48dp"/>
-            <FrameLayout android:layout_margin="6dp" android:background="@drawable/glass_color" android:layout_width="56dp" android:layout_height="56dp"><ImageView android:id="@+id/dDrawer" android:src="@android:drawable/ic_menu_sort_by_size" android:tint="#FFF" android:layout_gravity="center" android:layout_width="24dp" android:layout_height="24dp"/></FrameLayout>
-            <ImageView android:id="@+id/dCam" android:src="@android:drawable/ic_menu_camera" android:tint="#FFFF8C6B" android:padding="10dp" android:layout_margin="6dp" android:layout_width="48dp" android:layout_height="48dp"/>
-            <ImageView android:id="@+id/dChrome" android:src="@android:drawable/ic_menu_search" android:tint="#FFFF5A8C" android:padding="10dp" android:layout_margin="6dp" android:layout_width="48dp" android:layout_height="48dp"/>
+    <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingBottom="20dp" android:paddingTop="0dp">
+        <LinearLayout android:id="@+id/dock" android:orientation="horizontal" android:gravity="center" android:background="@drawable/glass" android:padding="8dp" android:layout_width="match_parent" android:layout_height="72dp">
+            <ImageView android:id="@+id/dPhone" android:src="@android:drawable/ic_menu_call" android:tint="#FF5A8CFF" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="48dp"/>
+            <ImageView android:id="@+id/dMsg" android:src="@android:drawable/ic_dialog_email" android:tint="#FF50E3C6" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="48dp"/>
+            <FrameLayout android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp" android:background="@drawable/glass_color"><ImageView android:id="@+id/dDrawer" android:src="@android:drawable/ic_menu_sort_by_size" android:tint="#FFF" android:layout_gravity="center" android:layout_width="24dp" android:layout_height="24dp"/></FrameLayout>
+            <ImageView android:id="@+id/dCam" android:src="@android:drawable/ic_menu_camera" android:tint="#FFFF8C6B" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="48dp"/>
+            <ImageView android:id="@+id/dChrome" android:src="@android:drawable/ic_menu_search" android:tint="#FFFF5A8C" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="48dp"/>
         </LinearLayout>
     </FrameLayout>
 </FrameLayout>
