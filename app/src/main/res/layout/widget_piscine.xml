@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
  android:layout_width="match_parent" android:layout_height="wrap_content" app:cardCornerRadius="18dp" app:cardElevation="2dp" android:layout_marginBottom="14dp">
- <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp">
+ <LinearLayout android:orientation="vertical" android:padding="16dp" android:layout_width="match_parent" android:layout_height="wrap_content">
   <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
-   <TextView android:text="🏊" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-   <TextView android:text="Piscine Les Ponts-de-Cé" android:textStyle="bold" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:textSize="13sp"/>
-   <TextView android:id="@+id/txtPiscineStatus" android:text="--" android:background="#C8E6C9" android:textSize="11sp" android:padding="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+   <TextView android:text="🏊" android:textSize="18sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+   <TextView android:text="Piscine Les Ponts-de-Cé" android:textStyle="bold" android:layout_marginStart="8dp" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
+   <TextView android:id="@+id/txtPiscineStatus" android:text="Fermé" android:background="#FFCCCB" android:padding="6dp" android:textSize="11sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
   </LinearLayout>
-  <TextView android:id="@+id/txtHoraires" android:text="Horaires aujourd'hui : --" android:textSize="12sp" android:layout_marginTop="10dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-  <TextView android:id="@+id/txtBassin" android:text="Bassin : 27°" android:textSize="12sp" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-  <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp">
-   <TextView android:id="@+id/txtAffluenceLabel" android:text="Affluence : --" android:textSize="12sp" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
-   <TextView android:id="@+id/txtAffluence" android:text="--" android:background="#C8E6C9" android:textSize="11sp" android:padding="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+  <TextView android:id="@+id/txtHoraires" android:text="Horaires aujourd'hui : 12h-18h30" android:textSize="13sp" android:layout_marginTop="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+  <TextView android:id="@+id/txtBassin" android:text="Bassin : 27° - Av. Boire Salée" android:textSize="13sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+  <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+   <TextView android:text="Affluence : " android:textSize="13sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+   <TextView android:id="@+id/txtAffluence" android:text="Fermée" android:textSize="13sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
   </LinearLayout>
  </LinearLayout>
 </androidx.cardview.widget.CardView>
