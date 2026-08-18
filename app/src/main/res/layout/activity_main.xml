@@ -29,8 +29,7 @@
                 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
                     <TextView android:text="🌐" android:textSize="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                     <EditText android:id="@+id/searchWebMain" android:hint="yt Luffy, g, d, w..." android:textColor="#FFF" android:textColorHint="#88FFFFFF" android:background="@android:color/transparent" android:singleLine="true" android:imeOptions="actionSearch" android:layout_marginLeft="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent"/>
-                    <TextView android:id="@+id/btnVoice" android:text="🎤" android:textSize="14sp" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_marginLeft="4dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
-                    <TextView android:id="@+id/btnWebGo" android:text="➤" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_marginLeft="4dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
+                    <TextView android:id="@+id/btnWebGo" android:text="➤" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_marginLeft="8dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
                 </LinearLayout>
             </FrameLayout>
             <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
