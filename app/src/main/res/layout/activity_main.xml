@@ -4,15 +4,16 @@
     <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="48dp" android:paddingBottom="120dp" android:paddingLeft="12dp" android:paddingRight="12dp" android:overScrollMode="never" android:background="@android:color/transparent">
         <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
             <FrameLayout android:layout_width="match_parent" android:layout_height="140dp" android:background="@drawable/glass_color" android:padding="18dp" android:layout_marginBottom="12dp">
-                <TextView android:id="@+id/clock" android:text="22:30" android:textColor="#FFF" android:textSize="40sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/clock" android:text="22:52" android:textColor="#FFF" android:textSize="40sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 <TextView android:id="@+id/date" android:text="MAR. 18 AOÛT • Paris" android:textColor="#CCFFFFFF" android:textSize="11sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 <TextView android:id="@+id/btnMenu" android:text="⋮" android:textSize="20sp" android:textColor="#FFF" android:background="@drawable/item_bg" android:padding="6dp" android:layout_gravity="top|end" android:layout_width="34dp" android:layout_height="34dp" android:gravity="center"/>
             </FrameLayout>
-            <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
-                <FrameLayout android:layout_weight="1" android:layout_marginEnd="6dp" android:background="@drawable/glass_weather" android:padding="14dp" android:layout_width="0dp" android:layout_height="110dp"><TextView android:text="⛅" android:textSize="28sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/><TextView android:text="18°&#10;Partly Cloudy" android:textColor="#FFF" android:textSize="12sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/></FrameLayout>
-                <FrameLayout android:layout_weight="1" android:layout_marginStart="6dp" android:background="@drawable/glass_clock" android:padding="14dp" android:layout_width="0dp" android:layout_height="110dp"><TextView android:text="◷" android:textSize="24sp" android:textColor="#FFF" android:layout_width="wrap_content" android:layout_height="wrap_content"/><TextView android:text="Clock&#10;Tue, Oct 15" android:textColor="#FFF" android:textSize="12sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/></FrameLayout>
-            </LinearLayout>
-            <FrameLayout android:id="@+id/addWidgetHint" android:layout_width="match_parent" android:layout_height="80dp" android:background="@drawable/glass" android:layout_marginTop="16dp" android:visibility="visible">
+            <!-- SEULEMENT METEO MAINTENANT, CLOCK SUPPRIMÉ -->
+            <FrameLayout android:layout_width="match_parent" android:layout_height="110dp" android:background="@drawable/glass_weather" android:padding="14dp">
+                <TextView android:text="⛅" android:textSize="28sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:text="18°&#10;Partly Cloudy" android:textColor="#FFF" android:textSize="12sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </FrameLayout>
+            <FrameLayout android:id="@+id/addWidgetHint" android:layout_width="match_parent" android:layout_height="80dp" android:background="@drawable/glass" android:layout_marginTop="16dp">
                 <TextView android:text="+ Ajouter un widget (tape ici)" android:textColor="#88FFFFFF" android:textSize="13sp" android:layout_gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </FrameLayout>
             <LinearLayout android:id="@+id/widgetContainer" android:orientation="vertical" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
