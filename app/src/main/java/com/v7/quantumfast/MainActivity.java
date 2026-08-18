@@ -1,5 +1,5 @@
 package com.v7.quantumfast;
-import android.app.Activity; import android.app.AlarmManager; import android.content.*; import android.content.pm.*; import android.graphics.*; import android.graphics.drawable.Drawable; import android.net.Uri; import android.os.*; import android.view.*; import android.view.inputmethod.EditorInfo; import android.widget.*; import androidx.core.app.ActivityCompat; import androidx.core.content.ContextCompat; import androidx.recyclerview.widget.*; import java.io.*; import java.net.*; import java.text.SimpleDateFormat; import java.util.*; import java.util.concurrent.*; import org.json.JSONObject;
+import android.app.Activity; import android.app.AlarmManager; import android.content.*; import android.content.pm.*; import android.graphics.*; import android.graphics.drawable.Drawable; import android.net.Uri; import android.os.*; import android.view.*; import android.view.inputmethod.EditorInfo; import android.widget.*; import androidx.core.app.ActivityCompat; import androidx.core.content.ContextCompat; import androidx.recyclerview.widget.*; import java.io.*; import java.net.*; import java.text.SimpleDateFormat; import java.util.*; import java.util.concurrent.*;
 public class MainActivity extends Activity {
     ImageView wallpaperView; ExecutorService exec = Executors.newSingleThreadExecutor(); Handler main = new Handler(Looper.getMainLooper());
     List<ResolveInfo> cache = Collections.synchronizedList(new ArrayList<>()); Map<String,Drawable> iconCache = new ConcurrentHashMap<>(); Map<String,String> labelCache = new ConcurrentHashMap<>(); long lastClick=0;
@@ -7,7 +7,6 @@ public class MainActivity extends Activity {
     RecyclerView rvSugg, rvFav, rvFolders; List<ResolveInfo> suggList = new ArrayList<>(); SuggAdapter suggAd;
     static class Fav{ String name; String url; Fav(String n,String u){name=n;url=u;} } List<Fav> favs = new ArrayList<>(); FavAdapter favAd;
     static class Folder{ String name; List<String> pkgs; Folder(String n,List<String> p){name=n;pkgs=p;} } List<Folder> folders = new ArrayList<>(); FolderAdapter folderAd;
-
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
         getWindow().setStatusBarColor(0); getWindow().setNavigationBarColor(0);
@@ -22,7 +21,8 @@ public class MainActivity extends Activity {
         rvSugg.setLayoutManager(new LinearLayoutManager(this)); suggAd=new SuggAdapter(); rvSugg.setAdapter(suggAd);
         rvFav.setLayoutManager(new GridLayoutManager(this,4)); loadFavs(); favAd=new FavAdapter(); rvFav.setAdapter(favAd);
         rvFolders.setLayoutManager(new GridLayoutManager(this,2)); loadFolders(); folderAd=new FolderAdapter(); rvFolders.setAdapter(folderAd);
-        applyRealBlur(); preloadFast(); setupAtAGlance(); setupDock(); loadWallpaperFast();
+        // PLUS DE BLUR - net
+        preloadFast(); setupAtAGlanceSimple(); setupDock(); loadWallpaperFast();
         EditText searchApps=findViewById(R.id.searchAppsMain); EditText searchWeb=findViewById(R.id.searchWebMain); TextView clear=findViewById(R.id.clearApps);
         final Runnable[] debounce=new Runnable[1];
         searchApps.addTextChangedListener(new android.text.TextWatcher(){
@@ -47,74 +47,17 @@ public class MainActivity extends Activity {
         main.postDelayed(()->{ if(!isDefaultLauncher()) showGlassDialog(); }, 800);
         findViewById(R.id.btnMenu).setOnClickListener(v->showGlassMenu());
     }
-
-    void requestAllPerms(){
-        List<String> need=new ArrayList<>();
-        String[] all={android.Manifest.permission.READ_MEDIA_IMAGES, android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS};
-        for(String p:all){ if(ContextCompat.checkSelfPermission(this,p)!=PackageManager.PERMISSION_GRANTED) need.add(p); }
-        if(!need.isEmpty()) ActivityCompat.requestPermissions(this, need.toArray(new String[0]), 999);
-    }
-
-    void applyRealBlur(){ if(Build.VERSION.SDK_INT>=31){ try{ float radius=22f; int[] ids={R.id.glassClock,R.id.glassSearch,R.id.glassWeb,R.id.dock,R.id.rvSuggestions}; for(int id:ids){ View v=findViewById(id); if(v!=null) v.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(radius,radius,android.graphics.Shader.TileMode.CLAMP)); } }catch(Exception e){} } }
-    void setupAtAGlance(){
+    void requestAllPerms(){ List<String> need=new ArrayList<>(); String[] all={android.Manifest.permission.READ_MEDIA_IMAGES, android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS}; for(String p:all){ if(ContextCompat.checkSelfPermission(this,p)!=PackageManager.PERMISSION_GRANTED) need.add(p); } if(!need.isEmpty()) ActivityCompat.requestPermissions(this, need.toArray(new String[0]), 999); }
+    void setupAtAGlanceSimple(){
         clock();
         try{ IntentFilter f=new IntentFilter(Intent.ACTION_BATTERY_CHANGED); BroadcastReceiver br=new BroadcastReceiver(){ public void onReceive(Context c,Intent i){ int lvl=i.getIntExtra("level",-1); TextView tv=findViewById(R.id.batteryInfo); if(tv!=null && lvl!=-1) tv.setText("🔋 "+lvl+"%"); } }; registerReceiver(br,f); }catch(Exception e){}
-        try{ AlarmManager am=(AlarmManager)getSystemService(ALARM_SERVICE); AlarmManager.AlarmClockInfo info=am.getNextAlarmClock(); TextView tv=findViewById(R.id.alarmInfo); if(info!=null && tv!=null){ SimpleDateFormat fmt=new SimpleDateFormat("HH:mm",Locale.FRANCE); tv.setText("⏰ "+fmt.format(new Date(info.getTriggerTime()))); } }catch(Exception e){}
-        exec.execute(()->{ try{ URL url=new URL("https://api.open-meteo.com/v1/forecast?latitude=48.8566&longitude=2.3522&current_weather=true"); HttpURLConnection conn=(HttpURLConnection)url.openConnection(); conn.setConnectTimeout(3000); conn.setReadTimeout(3000); InputStream in=conn.getInputStream(); BufferedReader br=new BufferedReader(new InputStreamReader(in)); StringBuilder sb=new StringBuilder(); String line; while((line=br.readLine())!=null) sb.append(line); JSONObject obj=new JSONObject(sb.toString()); JSONObject cur=obj.getJSONObject("current_weather"); double temp=cur.getDouble("temperature"); int code=cur.getInt("weathercode"); String emoji=code<=1?"☀️":code<=3?"⛅":code<=48?"🌫️":code<=67?"🌧️":"⛈️"; main.post(()->{ TextView tv=findViewById(R.id.weatherInfo); if(tv!=null) tv.setText(emoji+" "+(int)temp+"° Paris"); }); }catch(Exception e){ main.post(()->{ TextView tv=findViewById(R.id.weatherInfo); if(tv!=null) tv.setText("⛅ --°"); }); } });
     }
     String[] parseEngine(String q){ String low=q.toLowerCase().trim(); if(low.startsWith("yt ")||low.startsWith("yt:")||low.startsWith("youtube ")){ String qq=q.replaceFirst("(?i)^(yt |yt:|youtube )",""); return new String[]{"yt","https://www.youtube.com/results?search_query="+Uri.encode(qq),qq}; } if(low.startsWith("d ")||low.startsWith("duck ")){ String qq=q.replaceFirst("(?i)^(d |duck )",""); return new String[]{"d","https://duckduckgo.com/?q="+Uri.encode(qq),qq}; } if(low.startsWith("w ")||low.startsWith("wiki ")){ String qq=q.replaceFirst("(?i)^(w |wiki )",""); return new String[]{"w","https://fr.wikipedia.org/wiki/Special:Search?search="+Uri.encode(qq),qq}; } if(q.startsWith("http")) return new String[]{"g",q,q}; return new String[]{"g","https://www.google.com/search?q="+Uri.encode(q),q}; }
     void showBrowserChooserGlass(String query){ String[] parsed=parseEngine(query); String url=parsed[1]; String display=parsed[2]; Intent base = new Intent(Intent.ACTION_VIEW, Uri.parse(url)); List<ResolveInfo> browsers = getPackageManager().queryIntentActivities(base, 0); if(browsers.isEmpty()) return; android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_chooser); ((TextView)dlg.findViewById(R.id.cTitle)).setText((parsed[0].equals("yt")?"YouTube: ":parsed[0].equals("d")?"Duck: ":parsed[0].equals("w")?"Wiki: ":"Google: ")+display); ((TextView)dlg.findViewById(R.id.cUrl)).setText(url); RecyclerView rv=dlg.findViewById(R.id.cList); rv.setHasFixedSize(true); rv.setItemAnimator(null); rv.setLayoutManager(new LinearLayoutManager(this)); rv.setAdapter(new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView name; H(View v){super(v); ic=v.findViewById(R.id.cIcon); name=v.findViewById(R.id.cName);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_chooser,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=browsers.get(pos); h.name.setText(ri.loadLabel(getPackageManager())); try{ h.ic.setImageDrawable(ri.loadIcon(getPackageManager())); }catch(Exception e){} h.itemView.setOnClickListener(v->{ try{ Intent intent=new Intent(Intent.ACTION_VIEW, Uri.parse(url)); intent.setPackage(ri.activityInfo.packageName); startActivity(intent); dlg.dismiss(); }catch(Exception e){} }); } public int getItemCount(){ return browsers.size(); } }); dlg.findViewById(R.id.cCancel).setOnClickListener(v->dlg.dismiss()); dlg.show(); }
-
     void loadFolders(){ folders.clear(); String saved=prefs.getString("folders",""); if(saved.isEmpty()) return; try{ for(String f:saved.split(";;")){ String[] parts=f.split("\\|\\|"); if(parts.length>=2){ String name=parts[0]; List<String> pkgs=new ArrayList<>(Arrays.asList(parts[1].split(","))); folders.add(new Folder(name,pkgs)); } } }catch(Exception e){} }
     void saveFolders(){ StringBuilder sb=new StringBuilder(); for(int i=0;i<folders.size();i++){ if(i>0) sb.append(";;"); sb.append(folders.get(i).name).append("||").append(String.join(",",folders.get(i).pkgs)); } prefs.edit().putString("folders",sb.toString()).apply(); }
-
-    void showCreateFolderDialog(){
-        android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_folder_create);
-        EditText nameEd=dlg.findViewById(R.id.folderName); RecyclerView rv=dlg.findViewById(R.id.folderAppList);
-        rv.setHasFixedSize(true); rv.setItemAnimator(null); rv.setLayoutManager(new LinearLayoutManager(this));
-        List<ResolveInfo> all; synchronized(cache){ all=new ArrayList<>(cache); }
-        // FIX: utiliser Set pour sélection stable
-        Set<String> selected=new HashSet<>();
-        RecyclerView.Adapter adapter=new RecyclerView.Adapter(){
-            class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; CheckBox cb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label); cb=v.findViewById(R.id.check);} }
-            public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app_check,p,false)); }
-            public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){
-                H h=(H)hh; ResolveInfo ri=all.get(pos); String pkg=ri.activityInfo.packageName;
-                String lbl=labelCache.getOrDefault(pkg, ri.loadLabel(getPackageManager()).toString());
-                h.lb.setText(lbl);
-                Drawable d=iconCache.get(pkg); if(d!=null) h.ic.setImageDrawable(d); else { h.ic.setImageResource(android.R.drawable.sym_def_app_icon); exec.execute(()->{ try{ Drawable dd=getPackageManager().getApplicationIcon(pkg); iconCache.put(pkg,dd); main.post(()->{ if(h.getBindingAdapterPosition()==pos) h.ic.setImageDrawable(dd); }); }catch(Exception e){} }); }
-                h.cb.setOnCheckedChangeListener(null);
-                h.cb.setChecked(selected.contains(pkg));
-                h.cb.setOnCheckedChangeListener((b,is)->{ if(is) selected.add(pkg); else selected.remove(pkg); });
-                h.itemView.setOnClickListener(v->{ if(selected.contains(pkg)) selected.remove(pkg); else selected.add(pkg); h.cb.setChecked(selected.contains(pkg)); });
-            }
-            public int getItemCount(){ return all.size(); }
-        };
-        rv.setAdapter(adapter);
-        dlg.findViewById(R.id.bCancel).setOnClickListener(v->dlg.dismiss());
-        dlg.findViewById(R.id.bCreate).setOnClickListener(v->{
-            String n=nameEd.getText().toString().trim(); if(n.isEmpty()) n="Dossier";
-            if(selected.isEmpty()){ Toast.makeText(this,"Coche au moins 1 app",0).show(); return; }
-            folders.add(new Folder(n,new ArrayList<>(selected)));
-            saveFolders(); folderAd.notifyDataSetChanged(); dlg.dismiss();
-            Toast.makeText(this,"Dossier "+n+" créé",0).show();
-        });
-        dlg.show();
-    }
-
-    void showFolderContent(Folder f){
-        android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen);
-        dlg.setContentView(R.layout.picker_dock);
-        RecyclerView rv=dlg.findViewById(R.id.recyclerDock); rv.setLayoutManager(new GridLayoutManager(this,4));
-        List<ResolveInfo> list=new ArrayList<>(); synchronized(cache){ for(ResolveInfo ri:cache) if(f.pkgs.contains(ri.activityInfo.packageName)) list.add(ri); }
-        rv.setAdapter(new RecyclerView.Adapter(){
-            class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
-            public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); }
-            public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=list.get(pos); h.lb.setText(labelCache.getOrDefault(ri.activityInfo.packageName, ri.loadLabel(getPackageManager()).toString())); Drawable d=iconCache.get(ri.activityInfo.packageName); if(d!=null) h.ic.setImageDrawable(d); h.itemView.setOnClickListener(v->{ launch(ri.activityInfo.packageName); dlg.dismiss(); }); }
-            public int getItemCount(){ return list.size(); }
-        }); dlg.show();
-    }
-
+    void showCreateFolderDialog(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_folder_create); EditText nameEd=dlg.findViewById(R.id.folderName); RecyclerView rv=dlg.findViewById(R.id.folderAppList); rv.setHasFixedSize(true); rv.setItemAnimator(null); rv.setLayoutManager(new LinearLayoutManager(this)); List<ResolveInfo> all; synchronized(cache){ all=new ArrayList<>(cache); } Set<String> selected=new HashSet<>(); RecyclerView.Adapter adapter=new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; CheckBox cb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label); cb=v.findViewById(R.id.check);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app_check,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=all.get(pos); String pkg=ri.activityInfo.packageName; String lbl=labelCache.getOrDefault(pkg, ri.loadLabel(getPackageManager()).toString()); h.lb.setText(lbl); Drawable d=iconCache.get(pkg); if(d!=null) h.ic.setImageDrawable(d); else { h.ic.setImageResource(android.R.drawable.sym_def_app_icon); exec.execute(()->{ try{ Drawable dd=getPackageManager().getApplicationIcon(pkg); iconCache.put(pkg,dd); main.post(()->{ if(h.getBindingAdapterPosition()==pos) h.ic.setImageDrawable(dd); }); }catch(Exception e){} }); } h.cb.setOnCheckedChangeListener(null); h.cb.setChecked(selected.contains(pkg)); h.cb.setOnCheckedChangeListener((b,is)->{ if(is) selected.add(pkg); else selected.remove(pkg); }); h.itemView.setOnClickListener(v->{ if(selected.contains(pkg)) selected.remove(pkg); else selected.add(pkg); h.cb.setChecked(selected.contains(pkg)); }); } public int getItemCount(){ return all.size(); } }; rv.setAdapter(adapter); dlg.findViewById(R.id.bCancel).setOnClickListener(v->dlg.dismiss()); dlg.findViewById(R.id.bCreate).setOnClickListener(v->{ String n=nameEd.getText().toString().trim(); if(n.isEmpty()) n="Dossier"; if(selected.isEmpty()){ Toast.makeText(this,"Coche au moins 1 app",0).show(); return; } folders.add(new Folder(n,new ArrayList<>(selected))); saveFolders(); folderAd.notifyDataSetChanged(); dlg.dismiss(); }); dlg.show(); }
+    void showFolderContent(Folder f){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.setContentView(R.layout.picker_dock); RecyclerView rv=dlg.findViewById(R.id.recyclerDock); rv.setLayoutManager(new GridLayoutManager(this,4)); List<ResolveInfo> list=new ArrayList<>(); synchronized(cache){ for(ResolveInfo ri:cache) if(f.pkgs.contains(ri.activityInfo.packageName)) list.add(ri); } rv.setAdapter(new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=list.get(pos); h.lb.setText(labelCache.getOrDefault(ri.activityInfo.packageName, ri.loadLabel(getPackageManager()).toString())); Drawable d=iconCache.get(ri.activityInfo.packageName); if(d!=null) h.ic.setImageDrawable(d); h.itemView.setOnClickListener(v->{ launch(ri.activityInfo.packageName); dlg.dismiss(); }); } public int getItemCount(){ return list.size(); } }); dlg.show(); }
     boolean isDefaultLauncher(){ Intent home = new Intent(Intent.ACTION_MAIN); home.addCategory(Intent.CATEGORY_HOME); ResolveInfo ri = getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY); return ri!=null && ri.activityInfo!=null && getPackageName().equals(ri.activityInfo.packageName); }
     void showGlassDialog(){ if(prefs.getBoolean("asked_default", false)) return; android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ prefs.edit().putBoolean("asked_default", true).apply(); dlg.dismiss(); try{ Intent i = new Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS); startActivity(i);}catch(Exception e){} }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->{ prefs.edit().putBoolean("asked_default", true).apply(); dlg.dismiss(); }); dlg.show(); }
     void showGlassMenu(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); ((TextView)dlg.findViewById(R.id.dTitle)).setText("Quantum"); ((TextView)dlg.findViewById(R.id.dMsg)).setText("Dossiers: "+folders.size()+"\nMoteurs: yt / d / w"); ((TextView)dlg.findViewById(R.id.bOk)).setText("Fond"); ((TextView)dlg.findViewById(R.id.bCancel)).setText("Tiroir"); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ dlg.dismiss(); pickWallpaperInternal(); }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->{ dlg.dismiss(); openDrawerWithQuery(""); }); dlg.show(); }
