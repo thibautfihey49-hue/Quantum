@@ -4,33 +4,51 @@ public class MainActivity extends Activity {
     ImageView wallpaperView; ExecutorService exec = Executors.newFixedThreadPool(3); Handler main = new Handler(Looper.getMainLooper());
     List<ResolveInfo> cache = Collections.synchronizedList(new ArrayList<>()); Map<String,Drawable> iconCache = new ConcurrentHashMap<>(); long lastClick=0;
     SharedPreferences prefs; String[] dockKeys={"dock_0","dock_1","dock_2","dock_3","dock_4","dock_5"}; String[] defaultPkgs={"com.android.dialer","com.google.android.gm","com.google.android.apps.messaging","com.google.android.calendar","com.android.camera2","com.android.chrome"};
+    RecyclerView rvSugg, rvFav; List<ResolveInfo> suggList = new ArrayList<>(); SuggAdapter suggAd;
+    static class Fav{ String name; String url; Fav(String n,String u){name=n;url=u;} }
+    List<Fav> favs = new ArrayList<>(); FavAdapter favAd;
+
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
         getWindow().setStatusBarColor(0); getWindow().setNavigationBarColor(0);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER); setContentView(R.layout.activity_main);
-        wallpaperView=findViewById(R.id.wallpaperView); prefs=getSharedPreferences("dock",0); preload(); clock(); setupDock(); loadSavedWallpaper();
+        wallpaperView=findViewById(R.id.wallpaperView); prefs=getSharedPreferences("dock",0);
+        rvSugg=findViewById(R.id.rvSuggestions); rvFav=findViewById(R.id.rvFavorites);
+        rvSugg.setLayoutManager(new LinearLayoutManager(this)); suggAd=new SuggAdapter(); rvSugg.setAdapter(suggAd);
+        rvFav.setLayoutManager(new GridLayoutManager(this,4)); loadFavs(); favAd=new FavAdapter(); rvFav.setAdapter(favAd);
+        preload(); clock(); setupDock(); loadSavedWallpaper();
+
         EditText searchApps=findViewById(R.id.searchAppsMain); EditText searchWeb=findViewById(R.id.searchWebMain);
-        searchApps.setOnFocusChangeListener((v,has)->{ if(has) openDrawerWithQuery(""); }); searchApps.setOnClickListener(v->openDrawerWithQuery(""));
-        searchApps.setOnEditorActionListener((v,actionId,event)->{ if(actionId==EditorInfo.IME_ACTION_SEARCH){ openDrawerWithQuery(v.getText().toString()); return true;} return false; });
-        View.OnClickListener goWeb= vv->{ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooser(q); };
-        findViewById(R.id.btnWebGo).setOnClickListener(goWeb);
+        TextView clear=findViewById(R.id.clearApps);
+        searchApps.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int a,int b,int c){}
+            public void afterTextChanged(android.text.Editable s){}
+            public void onTextChanged(CharSequence q,int a,int b,int c){
+                String qq=q.toString().trim(); if(qq.isEmpty()){ rvSugg.setVisibility(View.GONE); clear.setVisibility(View.GONE); return; }
+                clear.setVisibility(View.VISIBLE);
+                exec.execute(()->{
+                    List<ResolveInfo> r=new ArrayList<>(); String low=qq.toLowerCase();
+                    for(ResolveInfo ri:cache) if(ri.loadLabel(getPackageManager()).toString().toLowerCase().contains(low)) r.add(ri);
+                    main.post(()->{ suggList.clear(); suggList.addAll(r); suggAd.notifyDataSetChanged(); rvSugg.setVisibility(r.isEmpty()?View.GONE:View.VISIBLE); });
+                });
+            }
+        });
+        clear.setOnClickListener(v->{ searchApps.setText(""); rvSugg.setVisibility(View.GONE); clear.setVisibility(View.GONE); });
         searchWeb.setOnEditorActionListener((v,actionId,event)->{ if(actionId==EditorInfo.IME_ACTION_SEARCH){ String q=v.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooser(q); return true;} return false; });
+        findViewById(R.id.btnWebGo).setOnClickListener(v->{ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooser(q); });
+        findViewById(R.id.btnAddFav).setOnClickListener(v->showAddFavDialog());
         main.postDelayed(()->{ if(!isDefaultLauncher()) showGlassDialog(); }, 800);
         findViewById(R.id.btnMenu).setOnClickListener(v->showGlassMenu());
     }
+
     boolean isDefaultLauncher(){ Intent home = new Intent(Intent.ACTION_MAIN); home.addCategory(Intent.CATEGORY_HOME); ResolveInfo ri = getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY); return ri!=null && ri.activityInfo!=null && getPackageName().equals(ri.activityInfo.packageName); }
-    void showGlassDialog(){
-        if(prefs.getBoolean("asked_default", false)) return;
-        android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default);
-        dlg.findViewById(R.id.bOk).setOnClickListener(v->{ prefs.edit().putBoolean("asked_default", true).apply(); dlg.dismiss(); try{ Intent i = new Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS); startActivity(i);}catch(Exception e){} });
-        dlg.findViewById(R.id.bCancel).setOnClickListener(v->{ prefs.edit().putBoolean("asked_default", true).apply(); dlg.dismiss(); }); dlg.show();
-    }
+    void showGlassDialog(){ if(prefs.getBoolean("asked_default", false)) return; android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ prefs.edit().putBoolean("asked_default", true).apply(); dlg.dismiss(); try{ Intent i = new Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS); startActivity(i);}catch(Exception e){} }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->{ prefs.edit().putBoolean("asked_default", true).apply(); dlg.dismiss(); }); dlg.show(); }
     void showGlassMenu(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); ((TextView)dlg.findViewById(R.id.dTitle)).setText("Quantum"); ((TextView)dlg.findViewById(R.id.dMsg)).setText("Changer fond • Ouvrir tiroir"); ((TextView)dlg.findViewById(R.id.bOk)).setText("Fond"); ((TextView)dlg.findViewById(R.id.bCancel)).setText("Tiroir"); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ dlg.dismiss(); pickWallpaperInternal(); }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->{ dlg.dismiss(); openDrawerWithQuery(""); }); dlg.show(); }
     void loadSavedWallpaper(){ String uriStr=prefs.getString("custom_wallpaper_uri",null); if(uriStr!=null){ try{ Uri u=Uri.parse(uriStr); wallpaperView.setImageURI(u);}catch(Exception e){} } }
     void pickWallpaperInternal(){ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("image/*"); i.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivityForResult(i,201); }
-    @Override protected void onActivityResult(int rc,int res,Intent data){ if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri uri=data.getData(); try{ getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri", uri.toString()).apply(); wallpaperView.setImageURI(uri); Toast.makeText(this,"Fond ✓",Toast.LENGTH_SHORT).show(); } }
+    @Override protected void onActivityResult(int rc,int res,Intent data){ if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri uri=data.getData(); try{ getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri", uri.toString()).apply(); wallpaperView.setImageURI(uri); } }
     boolean tap(){ long n=SystemClock.uptimeMillis(); if(n-lastClick<180) return false; lastClick=n; return true; }
     void clock(){ TextView c=findViewById(R.id.clock); TextView d=findViewById(R.id.date); SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE); SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE); Runnable r=new Runnable(){public void run(){ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); main.postDelayed(this,30000);} }; r.run(); }
     void preload(){ exec.execute(()->{ try{ PackageManager pm=getPackageManager(); Intent ii=new Intent(Intent.ACTION_MAIN,null); ii.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> l=pm.queryIntentActivities(ii,0); l.sort((a,bb)->a.loadLabel(pm).toString().compareToIgnoreCase(bb.loadLabel(pm).toString())); cache.clear(); cache.addAll(l); for(ResolveInfo ri:l){ try{ if(!iconCache.containsKey(ri.activityInfo.packageName)) iconCache.put(ri.activityInfo.packageName, ri.loadIcon(pm)); }catch(Exception e){} } main.post(()->setupDock()); }catch(Exception e){}}); }
@@ -38,61 +56,15 @@ public class MainActivity extends Activity {
     String findRealPkg(String pkg){ if(pkg==null||pkg.isEmpty()) return null; try{ getPackageManager().getPackageInfo(pkg,0); return pkg;}catch(Exception e){} return null; }
     void updateDockIcon(ImageView iv, String pkg){ Drawable cd=iconCache.get(pkg); if(cd!=null){ iv.setImageDrawable(cd); return; } exec.execute(()->{ try{ Drawable d=getPackageManager().getApplicationIcon(pkg); iconCache.put(pkg,d); main.post(()->iv.setImageDrawable(d)); }catch(Exception e){}}); }
     void pickDockApp(int dockIdx){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.setContentView(R.layout.picker_dock); RecyclerView rv=dlg.findViewById(R.id.recyclerDock); rv.setHasFixedSize(true); rv.setLayoutManager(new GridLayoutManager(this,5)); List<ResolveInfo> list=new ArrayList<>(cache); rv.setAdapter(new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=list.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable d=iconCache.get(ri.activityInfo.packageName); if(d!=null) h.ic.setImageDrawable(d); h.itemView.setOnClickListener(v->{ prefs.edit().putString(dockKeys[dockIdx], ri.activityInfo.packageName).apply(); dlg.dismiss(); setupDock(); }); } public int getItemCount(){ return list.size(); } }); dlg.show(); }
-    void showBrowserChooser(String query){
-        String url = query.startsWith("http")? query : "https://www.google.com/search?q="+Uri.encode(query);
-        Intent base = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-        List<ResolveInfo> browsers = getPackageManager().queryIntentActivities(base, 0);
-        if(browsers.isEmpty()){ Toast.makeText(this,"Aucun navigateur",Toast.LENGTH_SHORT).show(); return; }
-        String[] names=new String[browsers.size()];
-        for(int i=0;i<browsers.size();i++) names[i]=browsers.get(i).loadLabel(getPackageManager()).toString();
-        new android.app.AlertDialog.Builder(this).setTitle("Choisir navigateur: "+query)
-          .setItems(names, (d,which)->{
-                try{
-                    ResolveInfo ri=browsers.get(which);
-                    Intent intent=new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                    intent.setPackage(ri.activityInfo.packageName);
-                    prefs.edit().putString("default_browser", ri.activityInfo.packageName).apply();
-                    startActivity(intent);
-                }catch(Exception e){}
-            }).setNegativeButton("Annuler", null).show();
-    }
-    void openDrawerWithQuery(String initial){
-        if(!tap() && initial.isEmpty()) return;
-        android.app.Dialog dlg=new android.app.Dialog(this,android.R.style.Theme_Translucent_NoTitleBar_Fullscreen);
-        dlg.getWindow().setStatusBarColor(0); dlg.getWindow().setNavigationBarColor(0);
-        dlg.setContentView(R.layout.drawer);
-        RecyclerView rv=dlg.findViewById(R.id.recycler);
-        EditText s=dlg.findViewById(R.id.search);
-        rv.setHasFixedSize(true); rv.setItemViewCacheSize(50); rv.setItemAnimator(null); rv.setLayoutManager(new GridLayoutManager(this,5));
-        final List<ResolveInfo> filt = new ArrayList<>();
-        if(initial==null) initial="";
-        if(initial.isEmpty()) filt.addAll(cache);
-        else { String low=initial.toLowerCase(); for(ResolveInfo ri:cache) if(ri.loadLabel(getPackageManager()).toString().toLowerCase().contains(low)) filt.add(ri); }
-        final FastAdapter ad = new FastAdapter(filt,getPackageManager(),dlg);
-        rv.setAdapter(ad);
-        s.setText(initial);
-        final Runnable[] runHolder = new Runnable[1];
-        s.addTextChangedListener(new android.text.TextWatcher(){
-            public void beforeTextChanged(CharSequence a,int b,int c,int d){}
-            public void afterTextChanged(android.text.Editable e){}
-            public void onTextChanged(CharSequence q,int b,int c,int dd){
-                if(runHolder[0]!=null) main.removeCallbacks(runHolder[0]);
-                runHolder[0]=new Runnable(){
-                    public void run(){
-                        String qq=q.toString().toLowerCase().trim();
-                        List<ResolveInfo> r=new ArrayList<>();
-                        if(qq.isEmpty()) r.addAll(cache);
-                        else for(ResolveInfo ri:cache) if(ri.loadLabel(getPackageManager()).toString().toLowerCase().contains(qq)) r.add(ri);
-                        filt.clear(); filt.addAll(r);
-                        ad.notifyDataSetChanged();
-                    }
-                };
-                main.postDelayed(runHolder[0],80);
-            }
-        });
-        dlg.findViewById(R.id.close).setOnClickListener(v->dlg.dismiss());
-        dlg.show();
-    }
+    void showBrowserChooser(String query){ String url = query.startsWith("http")? query : "https://www.google.com/search?q="+Uri.encode(query); Intent base = new Intent(Intent.ACTION_VIEW, Uri.parse(url)); List<ResolveInfo> browsers = getPackageManager().queryIntentActivities(base, 0); if(browsers.isEmpty()){ Toast.makeText(this,"Aucun navigateur",Toast.LENGTH_SHORT).show(); return; } String[] names=new String[browsers.size()]; for(int i=0;i<browsers.size();i++) names[i]=browsers.get(i).loadLabel(getPackageManager()).toString(); new android.app.AlertDialog.Builder(this).setTitle("Ouvrir avec: "+query).setItems(names,(d,which)->{ try{ ResolveInfo ri=browsers.get(which); Intent intent=new Intent(Intent.ACTION_VIEW, Uri.parse(url)); intent.setPackage(ri.activityInfo.packageName); startActivity(intent);}catch(Exception e){} }).setNegativeButton("Annuler", null).show(); }
+    void openDrawerWithQuery(String initial){ if(!tap() && initial.isEmpty()) return; android.app.Dialog dlg=new android.app.Dialog(this,android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.getWindow().setStatusBarColor(0); dlg.getWindow().setNavigationBarColor(0); dlg.setContentView(R.layout.drawer); RecyclerView rv=dlg.findViewById(R.id.recycler); EditText s=dlg.findViewById(R.id.search); rv.setHasFixedSize(true); rv.setLayoutManager(new GridLayoutManager(this,5)); final List<ResolveInfo> filt = new ArrayList<>(); if(initial==null) initial=""; if(initial.isEmpty()) filt.addAll(cache); else { String low=initial.toLowerCase(); for(ResolveInfo ri:cache) if(ri.loadLabel(getPackageManager()).toString().toLowerCase().contains(low)) filt.add(ri); } final FastAdapter ad = new FastAdapter(filt,getPackageManager(),dlg); rv.setAdapter(ad); s.setText(initial); final Runnable[] runHolder = new Runnable[1]; s.addTextChangedListener(new android.text.TextWatcher(){ public void beforeTextChanged(CharSequence a,int b,int c,int d){} public void afterTextChanged(android.text.Editable e){} public void onTextChanged(CharSequence q,int b,int c,int dd){ if(runHolder[0]!=null) main.removeCallbacks(runHolder[0]); runHolder[0]=new Runnable(){ public void run(){ String qq=q.toString().toLowerCase().trim(); List<ResolveInfo> r=new ArrayList<>(); if(qq.isEmpty()) r.addAll(cache); else for(ResolveInfo ri:cache) if(ri.loadLabel(getPackageManager()).toString().toLowerCase().contains(qq)) r.add(ri); filt.clear(); filt.addAll(r); ad.notifyDataSetChanged(); } }; main.postDelayed(runHolder[0],80); } }); dlg.findViewById(R.id.close).setOnClickListener(v->dlg.dismiss()); dlg.show(); }
     void launch(String pkg){ try{ Intent it=getPackageManager().getLaunchIntentForPackage(pkg); if(it!=null) startActivity(it);}catch(Exception e){} }
-    class FastAdapter extends RecyclerView.Adapter<FastAdapter.H>{ List<ResolveInfo> list; PackageManager pm; android.app.Dialog dlg; FastAdapter(List<ResolveInfo> l,PackageManager p,android.app.Dialog d){list=l;pm=p;dlg=d;} class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup pa,int t){ View v=getLayoutInflater().inflate(R.layout.item_app,pa,false); v.setLayerType(View.LAYER_TYPE_HARDWARE,null); return new H(v); } public void onBindViewHolder(H h,int pos){ ResolveInfo ri=list.get(pos); h.lb.setText(ri.loadLabel(pm)); Drawable cd=iconCache.get(ri.activityInfo.packageName); if(cd!=null) h.ic.setImageDrawable(cd); h.itemView.setOnClickListener(v->{ if(!tap()) return; try{ Intent it=pm.getLaunchIntentForPackage(ri.activityInfo.packageName); if(it!=null) startActivity(it); dlg.dismiss();}catch(Exception e){}}); } public int getItemCount(){ return list.size(); } }
+
+    void loadFavs(){ favs.clear(); String saved=prefs.getString("favs",""); if(saved.isEmpty()){ favs.add(new Fav("Google","https://google.com")); favs.add(new Fav("YouTube","https://youtube.com")); return; } try{ for(String p:saved.split(";;")){ String[] sp=p.split("\\|\\|"); if(sp.length==2) favs.add(new Fav(sp[0],sp[1])); } }catch(Exception e){} }
+    void saveFavs(){ StringBuilder sb=new StringBuilder(); for(int i=0;i<favs.size();i++){ if(i>0) sb.append(";;"); sb.append(favs.get(i).name).append("||").append(favs.get(i).url); } prefs.edit().putString("favs", sb.toString()).apply(); }
+    void showAddFavDialog(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); ((TextView)dlg.findViewById(R.id.dTitle)).setText("Ajouter favori"); ((TextView)dlg.findViewById(R.id.dMsg)).setText("Ex: YouTube - https://youtube.com"); LinearLayout lay=new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); EditText eName=new EditText(this); eName.setHint("Nom"); eName.setTextColor(0xFFFFFFFF); eName.setHintTextColor(0x88FFFFFF); EditText eUrl=new EditText(this); eUrl.setHint("https://..."); eUrl.setTextColor(0xFFFFFFFF); eUrl.setHintTextColor(0x88FFFFFF); lay.addView(eName); lay.addView(eUrl); ((LinearLayout)dlg.findViewById(R.id.dTitle).getParent()).addView(lay,2); ((TextView)dlg.findViewById(R.id.bOk)).setText("Ajouter"); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ String n=eName.getText().toString().trim(); String u=eUrl.getText().toString().trim(); if(!n.isEmpty() &&!u.isEmpty()){ if(!u.startsWith("http")) u="https://"+u; favs.add(new Fav(n,u)); saveFavs(); favAd.notifyDataSetChanged(); dlg.dismiss(); } }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->dlg.dismiss()); dlg.show(); }
+
+    class SuggAdapter extends RecyclerView.Adapter<SuggAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ ResolveInfo ri=suggList.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable d=iconCache.get(ri.activityInfo.packageName); if(d!=null) h.ic.setImageDrawable(d); h.itemView.setOnClickListener(v->{ launch(ri.activityInfo.packageName); }); } public int getItemCount(){ return suggList.size(); } }
+    class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ TextView icon; TextView name; H(View v){super(v); icon=v.findViewById(R.id.favIcon); name=v.findViewById(R.id.favName);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_fav,p,false)); } public void onBindViewHolder(H h,int pos){ Fav f=favs.get(pos); h.name.setText(f.name); h.icon.setText(f.name.substring(0,1).toUpperCase()); h.itemView.setOnClickListener(v->showBrowserChooser(f.url)); h.itemView.setOnLongClickListener(v->{ favs.remove(pos); saveFavs(); notifyDataSetChanged(); return true; }); } public int getItemCount(){ return favs.size(); } }
+    class FastAdapter extends RecyclerView.Adapter<FastAdapter.H>{ List<ResolveInfo> list; PackageManager pm; android.app.Dialog dlg; FastAdapter(List<ResolveInfo> l,PackageManager p,android.app.Dialog d){list=l;pm=p;dlg=d;} class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup pa,int t){ View v=getLayoutInflater().inflate(R.layout.item_app,pa,false); return new H(v); } public void onBindViewHolder(H h,int pos){ ResolveInfo ri=list.get(pos); h.lb.setText(ri.loadLabel(pm)); Drawable cd=iconCache.get(ri.activityInfo.packageName); if(cd!=null) h.ic.setImageDrawable(cd); h.itemView.setOnClickListener(v->{ if(!tap()) return; try{ Intent it=pm.getLaunchIntentForPackage(ri.activityInfo.packageName); if(it!=null) startActivity(it); dlg.dismiss();}catch(Exception e){}}); } public int getItemCount(){ return list.size(); } }
 }

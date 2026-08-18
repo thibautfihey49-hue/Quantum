@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="68dp" android:layout_margin="4dp" android:background="@drawable/search_glass" android:padding="8dp">
+    <TextView android:id="@+id/favIcon" android:text="G" android:textColor="#FFF" android:textSize="18sp" android:textStyle="bold" android:gravity="center" android:background="@drawable/btn_glass" android:layout_width="32dp" android:layout_height="32dp"/>
+    <TextView android:id="@+id/favName" android:text="Google" android:textColor="#FFF" android:textSize="10sp" android:maxLines="1" android:layout_gravity="bottom" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</FrameLayout>
