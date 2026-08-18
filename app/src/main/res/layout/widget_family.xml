@@ -1,28 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent" android:layout_height="wrap_content"
-    app:cardCornerRadius="18dp" app:cardElevation="2dp" android:layout_marginBottom="14dp">
-    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp">
-        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
-            <TextView android:text="👨‍👧" android:textSize="18sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <TextView android:text="Family Link" android:textStyle="bold" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="8dp"/>
-            <TextView android:text="2 appareils" android:background="#E0E0E0" android:padding="4dp" android:textSize="11sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        </LinearLayout>
-        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
-            <TextView android:text="👤" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <LinearLayout android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="8dp">
-                <TextView android:text="Léonie • Tablette" android:textStyle="bold" android:textSize="13sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:text="Temps d'écran aujourd'hui : 1h32" android:textSize="11sp" android:textColor="#666" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            </LinearLayout>
-            <TextView android:text="Limité" android:background="#FFCCCB" android:textSize="11sp" android:padding="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        </LinearLayout>
-        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp">
-            <TextView android:text="👤" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <LinearLayout android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="8dp">
-                <TextView android:text="Maxime • Téléphone" android:textStyle="bold" android:textSize="13sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:text="Temps d'écran aujourd'hui : 45 min" android:textSize="11sp" android:textColor="#666" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            </LinearLayout>
-            <TextView android:text="OK" android:background="#C8E6C9" android:textSize="11sp" android:padding="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        </LinearLayout>
-    </LinearLayout>
+ android:layout_width="match_parent" android:layout_height="wrap_content" app:cardCornerRadius="18dp" app:cardElevation="2dp" android:layout_marginBottom="14dp">
+ <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp">
+  <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+   <TextView android:text="👨‍👧" android:textSize="18sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+   <TextView android:text="Family Link" android:textStyle="bold" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="8dp"/>
+   <TextView android:id="@+id/badgeAppareils" android:text="2 appareils" android:background="#E0E0E0" android:padding="6dp" android:textSize="11sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+  </LinearLayout>
+  <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
+   <TextView android:text="👤" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+   <LinearLayout android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="8dp">
+    <TextView android:text="Léonie • Tablette" android:textStyle="bold" android:textSize="13sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+    <TextView android:id="@+id/txtLeonie" android:text="Temps d'écran aujourd'hui : --" android:textSize="11sp" android:textColor="#666" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+   </LinearLayout>
+   <TextView android:id="@+id/badgeLeonie" android:text="Limité" android:background="#FFCCCB" android:textSize="11sp" android:padding="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+  </LinearLayout>
+  <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp">
+   <TextView android:text="👤" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+   <LinearLayout android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="8dp">
+    <TextView android:text="Maxime • Téléphone" android:textStyle="bold" android:textSize="13sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+    <TextView android:id="@+id/txtMaxime" android:text="Temps d'écran aujourd'hui : --" android:textSize="11sp" android:textColor="#666" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+   </LinearLayout>
+   <TextView android:id="@+id/badgeMaxime" android:text="OK" android:background="#C8E6C9" android:textSize="11sp" android:padding="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+  </LinearLayout>
+ </LinearLayout>
 </androidx.cardview.widget.CardView>
