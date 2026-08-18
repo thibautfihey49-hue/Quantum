@@ -1,6 +1,7 @@
 package com.v7.quantumfast;
 import android.content.Context;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
@@ -9,9 +10,11 @@ import com.google.api.services.gmail.model.*;
 import java.util.*;
 
 public class GmailHelper {
-    public static Gmail getService(Context ctx, String email){
+    public static Gmail getService(Context ctx, String email) throws UserRecoverableAuthIOException {
         GoogleAccountCredential cred = GoogleAccountCredential.usingOAuth2(ctx, Collections.singleton(GmailScopes.GMAIL_READONLY));
         cred.setSelectedAccountName(email);
+        // force token pour déclencher UserRecoverable si besoin
+        try{ cred.getToken(); } catch(UserRecoverableAuthIOException e){ throw e; } catch(Exception e){}
         return new Gmail.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance(), cred).setApplicationName("V7-QUANTUM-FAST").build();
     }
     public static class MailItem { public String subject, from; public MailItem(String s,String f){subject=s; from=f;} }
