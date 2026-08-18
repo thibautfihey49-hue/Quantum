@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="320dp" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/dialog_glass" android:padding="18dp">
+    <TextView android:id="@+id/cTitle" android:text="Ouvrir avec" android:textColor="#FFF" android:textSize="16sp" android:textStyle="bold" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <TextView android:id="@+id/cUrl" android:text="https://..." android:textColor="#88FFFFFF" android:textSize="11sp" android:maxLines="1" android:ellipsize="middle" android:layout_marginTop="4dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/cList" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:nestedScrollingEnabled="false" android:overScrollMode="never"/>
+    <TextView android:id="@+id/cCancel" android:text="Annuler" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="10dp" android:gravity="center" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
