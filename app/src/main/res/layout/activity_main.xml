@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000000" android:fitsSystemWindows="false">
-    <!-- FOND QUI REMPLIT VRAIMENT TOUT -->
-    <ImageView android:id="@+id/wallpaperView" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:adjustViewBounds="false" android:layout_gravity="center" android:background="#000000"/>
-    <!-- CONTENU -->
-    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="52dp" android:paddingBottom="190dp" android:paddingLeft="14dp" android:paddingRight="14dp" android:overScrollMode="never" android:background="@android:color/transparent">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000000">
+    <ImageView android:id="@+id/wallpaperView" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:layerType="none"/>
+    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="52dp" android:paddingBottom="190dp" android:paddingLeft="14dp" android:paddingRight="14dp" android:overScrollMode="never" android:fillViewport="true">
         <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
             <FrameLayout android:layout_width="match_parent" android:layout_height="132dp" android:background="@drawable/glass_main" android:padding="18dp">
                 <TextView android:id="@+id/clock" android:text="00:10" android:textColor="#FFF" android:textSize="44sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -17,7 +15,7 @@
                     <TextView android:id="@+id/clearApps" android:text="✕" android:textColor="#88FFFFFF" android:visibility="gone" android:padding="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </LinearLayout>
             </FrameLayout>
-            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSuggestions" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:background="@drawable/glass_main" android:padding="8dp" android:layout_marginTop="8dp"/>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSuggestions" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:background="@drawable/glass_main" android:padding="8dp" android:layout_marginTop="8dp" android:nestedScrollingEnabled="false" android:overScrollMode="never"/>
             <FrameLayout android:layout_width="match_parent" android:layout_height="54dp" android:background="@drawable/glass_main" android:layout_marginTop="12dp" android:paddingLeft="14dp" android:paddingRight="8dp">
                 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
                     <TextView android:text="🌐" android:textSize="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -29,11 +27,11 @@
                 <TextView android:text="⭐ Favoris" android:textColor="#FFF" android:textSize="13sp" android:textStyle="bold" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
                 <TextView android:id="@+id/btnAddFav" android:text="+ Ajouter site" android:textColor="#FFF" android:textSize="11sp" android:background="@drawable/btn_glass" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingTop="6dp" android:paddingBottom="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </LinearLayout>
-            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvFavorites" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp"/>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvFavorites" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:nestedScrollingEnabled="false" android:overScrollMode="never"/>
         </LinearLayout>
-    </ScrollView>
-    <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingBottom="72dp" android:background="@android:color/transparent">
-        <LinearLayout android:id="@+id/dock" android:orientation="horizontal" android:gravity="center" android:background="@drawable/glass_dock" android:padding="10dp" android:layout_width="match_parent" android:layout_height="78dp" android:elevation="12dp">
+    </androidx.core.widget.NestedScrollView>
+    <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingBottom="72dp">
+        <LinearLayout android:id="@+id/dock" android:orientation="horizontal" android:gravity="center" android:background="@drawable/glass_dock" android:padding="10dp" android:layout_width="match_parent" android:layout_height="78dp">
             <ImageView android:id="@+id/dPhone" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
             <ImageView android:id="@+id/dMsg" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
             <ImageView android:id="@+id/dExtra" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
