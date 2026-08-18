@@ -1,1 +1,8 @@
-<resources><style name="Theme.Quantum" parent="Theme.MaterialComponents.DayNight.NoActionBar"><item name="colorPrimary">#FFF</item></style></resources>
+<resources><style name="Theme.Quantum" parent="android:Theme.Material.Light.NoActionBar">
+    <item name="android:windowBackground">@android:color/transparent</item>
+    <item name="android:windowIsTranslucent">true</item>
+    <item name="android:windowTranslucentStatus">true</item>
+    <item name="android:windowTranslucentNavigation">true</item>
+    <item name="android:statusBarColor">#00000000</item>
+    <item name="android:navigationBarColor">#00000000</item>
+</style></resources>
