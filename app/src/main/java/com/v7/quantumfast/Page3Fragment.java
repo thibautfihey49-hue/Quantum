@@ -7,15 +7,18 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.*;
 import android.widget.*;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Calendar;
+import java.util.List;
 import org.json.JSONObject;
 
 public class Page3Fragment extends Fragment {
-    View pisView, meteoView;
+    View pisView, meteoView, mailView;
     @Override public View onCreateView(LayoutInflater inf, ViewGroup p, Bundle b){
         View root=inf.inflate(R.layout.fragment_page3,p,false);
         LinearLayout container=root.findViewById(R.id.widgetContainer);
@@ -30,9 +33,14 @@ public class Page3Fragment extends Fragment {
         meteoView=inf.inflate(R.layout.widget_meteo, container, false);
         container.addView(meteoView); updateMeteoReal();
 
-        View mail=inf.inflate(R.layout.widget_mail, container, false);
-        mail.setOnClickListener(v->openGmail());
-        container.addView(mail);
+        mailView=inf.inflate(R.layout.widget_mail, container, false);
+        mailView.setOnClickListener(v->{
+            GoogleSignInAccount acc = GoogleSignIn.getLastSignedInAccount(getActivity());
+            if(acc==null) ((MainActivity)getActivity()).signInGmail();
+            else openGmail();
+        });
+        container.addView(mailView);
+        updateGmailAuto();
 
         View emploi=inf.inflate(R.layout.widget_emploi, container, false);
         emploi.setOnClickListener(v->{try{Intent it=getActivity().getPackageManager().getLaunchIntentForPackage("com.indeed.android.jobsearch"); if(it!=null) startActivity(it); else startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://fr.indeed.com/jobs?l=Les+Ponts-de-Cé")));}catch(Exception e){}});
@@ -45,9 +53,44 @@ public class Page3Fragment extends Fragment {
         container.addView(dock);
         return root;
     }
+    @Override public void onResume(){ super.onResume(); updatePiscineReal(); updateMeteoReal(); updateGmailAuto(); }
+
     void openFamilyLink(){try{PackageManager pm=getActivity().getPackageManager(); for(String pkg:new String[]{"com.google.android.apps.kids.familylink","com.google.android.apps.kids.familylinkhelper"}){Intent it=pm.getLaunchIntentForPackage(pkg); if(it!=null){startActivity(it); return;}} startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://families.google.com")));}catch(Exception e){}}
     void openGmail(){try{Intent it=getActivity().getPackageManager().getLaunchIntentForPackage("com.google.android.gm"); if(it!=null) startActivity(it);}catch(Exception e){}}
+
     void updatePiscineReal(){try{Calendar c=Calendar.getInstance(); int m=c.get(Calendar.MONTH)+1; int dow=c.get(Calendar.DAY_OF_WEEK); int h=c.get(Calendar.HOUR_OF_DAY); boolean summer=m>=6&&m<=9; String hor; boolean open; if(!summer){hor="Fermée hors saison"; open=false;} else{if(dow==4){hor="12h-18h30"; open=h>=12&&h<20;} else if(dow==1||dow==7){hor="14h-18h30"; open=h>=14&&h<18;} else{hor="12h-18h30"; open=h>=12&&h<18;}} TextView th=pisView.findViewById(R.id.txtHoraires); if(th!=null) th.setText("Horaires aujourd'hui : "+hor); TextView st=pisView.findViewById(R.id.txtPiscineStatus); if(st!=null) st.setText(open?"Ouvert":"Fermé"); TextView af=pisView.findViewById(R.id.txtAffluence); if(af!=null) af.setText(open?(h<13?"Faible":h<16?"Moyenne":"Forte"):"Fermée");}catch(Exception e){}}
     void updateMeteoReal(){new Thread(()->{try{URL url=new URL("https://api.open-meteo.com/v1/forecast?latitude=47.3&longitude=-0.52&current_weather=true"); HttpURLConnection con=(HttpURLConnection)url.openConnection(); con.setConnectTimeout(4000); BufferedReader br=new BufferedReader(new InputStreamReader(con.getInputStream())); StringBuilder sb=new StringBuilder(); String l; while((l=br.readLine())!=null) sb.append(l); JSONObject cw=new JSONObject(sb.toString()).getJSONObject("current_weather"); double temp=cw.getDouble("temperature"); double wind=cw.getDouble("windspeed"); if(getActivity()==null) return; getActivity().runOnUiThread(()->{try{TextView t=meteoView.findViewById(R.id.txtMeteoTemp); if(t!=null) t.setText((int)temp+"°"); TextView d=meteoView.findViewById(R.id.txtMeteoDesc); if(d!=null) d.setText("Les Ponts-de-Cé - réel Open-Meteo"); TextView w=meteoView.findViewById(R.id.txtMeteoWind); if(w!=null) w.setText("Vent "+wind+" km/h - Bassin 27°");}catch(Exception e){}});}catch(Exception e){}}).start();}
+
+    void updateGmailAuto(){
+        new Thread(()->{
+            try{
+                if(getActivity()==null) return;
+                GoogleSignInAccount acc = GoogleSignIn.getLastSignedInAccount(getActivity());
+                if(acc==null){
+                    getActivity().runOnUiThread(()->{
+                        TextView cnt=mailView.findViewById(R.id.txtMailCount); if(cnt!=null) cnt.setText("Connecter");
+                        TextView t1=mailView.findViewById(R.id.txtMail1); if(t1!=null) t1.setText("• Clique ici pour connecter Gmail en auto-sync");
+                        TextView t2=mailView.findViewById(R.id.txtMail2); if(t2!=null) t2.setText("Tes vrais mails s'afficheront tout seuls");
+                    });
+                    return;
+                }
+                String email = acc.getEmail();
+                int unread = GmailHelper.fetchUnreadCount(getActivity(), email);
+                List<GmailHelper.MailItem> mails = GmailHelper.fetchInbox(getActivity(), email);
+                if(getActivity()==null) return;
+                getActivity().runOnUiThread(()->{
+                    TextView cnt=mailView.findViewById(R.id.txtMailCount); if(cnt!=null) cnt.setText(unread>0?unread+" non lus":"0 non lu");
+                    if(mails.size()>0){ TextView t1=mailView.findViewById(R.id.txtMail1); if(t1!=null) t1.setText("• "+mails.get(0).subject+" - "+mails.get(0).from); }
+                    if(mails.size()>1){ TextView t2=mailView.findViewById(R.id.txtMail2); if(t2!=null) t2.setText("• "+mails.get(1).subject); }
+                    if(mails.size()>2){ TextView t3=mailView.findViewById(R.id.txtMail3); if(t3!=null) t3.setText("• "+mails.get(2).subject); }
+                });
+            }catch(Exception e){
+                if(getActivity()==null) return;
+                getActivity().runOnUiThread(()->{
+                    TextView cnt=mailView.findViewById(R.id.txtMailCount); if(cnt!=null) cnt.setText("Ouvrir");
+                });
+            }
+        }).start();
+    }
     void launch(String pkg){try{PackageManager pm=getActivity().getPackageManager(); Intent it=pm.getLaunchIntentForPackage(pkg); if(it!=null) startActivity(it);}catch(Exception e){}}
 }
