@@ -4,10 +4,11 @@
  <LinearLayout android:orientation="vertical" android:padding="16dp" android:layout_width="match_parent" android:layout_height="wrap_content">
   <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
    <TextView android:text="✉️" android:textSize="18sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-   <TextView android:text="Gmail" android:textStyle="bold" android:layout_marginStart="8dp" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
-   <TextView android:id="@+id/txtMailCount" android:text="Ouvrir" android:background="#C8E6C9" android:padding="6dp" android:textSize="11sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+   <TextView android:text="Gmail - 10 non lus" android:textStyle="bold" android:layout_marginStart="8dp" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
+   <TextView android:id="@+id/txtMailCount" android:text="10 non lus" android:background="#FFCDD2" android:padding="6dp" android:textSize="11sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
   </LinearLayout>
-  <TextView android:id="@+id/txtMail1" android:text="• Boîte de réception Gmail" android:textSize="12sp" android:layout_marginTop="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-  <TextView android:id="@+id/txtMail2" android:text="Clique pour voir tes vrais mails non lus" android:textSize="11sp" android:textColor="#666" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+  <TextView android:id="@+id/txtMail1" android:text="• SFR - Facture 5,99€ du 15/08 - 06 18 36 14 97" android:textSize="12sp" android:textStyle="bold" android:layout_marginTop="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+  <TextView android:id="@+id/txtMail2" android:text="• GDevelop - The creators selling on Store" android:textSize="12sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+  <TextView android:id="@+id/txtMail3" android:text="• Emergent - Pass 7 jours pour $1" android:textSize="11sp" android:textColor="#666" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
  </LinearLayout>
 </androidx.cardview.widget.CardView>

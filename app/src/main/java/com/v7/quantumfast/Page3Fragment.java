@@ -20,24 +20,22 @@ public class Page3Fragment extends Fragment {
         View root=inf.inflate(R.layout.fragment_page3,p,false);
         LinearLayout container=root.findViewById(R.id.widgetContainer);
 
-        // FAMILY LINK VRAI
         View fam=inf.inflate(R.layout.widget_family, container, false);
         fam.setOnClickListener(v->openFamilyLink());
         container.addView(fam);
 
         pisView=inf.inflate(R.layout.widget_piscine, container, false);
-        container.addView(pisView);
-        updatePiscineReal();
+        container.addView(pisView); updatePiscineReal();
 
         meteoView=inf.inflate(R.layout.widget_meteo, container, false);
-        container.addView(meteoView);
-        updateMeteoReal();
+        container.addView(meteoView); updateMeteoReal();
 
         View mail=inf.inflate(R.layout.widget_mail, container, false);
         mail.setOnClickListener(v->openGmail());
         container.addView(mail);
 
         View emploi=inf.inflate(R.layout.widget_emploi, container, false);
+        emploi.setOnClickListener(v->{try{Intent it=getActivity().getPackageManager().getLaunchIntentForPackage("com.indeed.android.jobsearch"); if(it!=null) startActivity(it); else startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://fr.indeed.com/jobs?l=Les+Ponts-de-Cé")));}catch(Exception e){}});
         container.addView(emploi);
 
         LinearLayout dock=new LinearLayout(getActivity()); dock.setOrientation(LinearLayout.HORIZONTAL); dock.setBackgroundColor(0xFFFFFFFF); dock.setPadding(8,20,8,20);
