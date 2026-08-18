@@ -1,0 +1,2 @@
+package com.v7.quantumfast; import androidx.annotation.NonNull; import androidx.fragment.app.Fragment; import androidx.fragment.app.FragmentActivity; import androidx.viewpager2.adapter.FragmentStateAdapter;
+public class PagesAdapter extends FragmentStateAdapter { public PagesAdapter(FragmentActivity fa){super(fa);} @NonNull public Fragment createFragment(int p){ if(p==0) return new Page1Fragment(); if(p==1) return new Page2Fragment(); return new Page3Fragment(); } public int getItemCount(){return 3;} }

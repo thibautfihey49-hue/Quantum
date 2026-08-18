@@ -1,0 +1,2 @@
+package com.v7.quantumfast; import android.os.Bundle; import android.view.*; import android.widget.TextView; import androidx.annotation.NonNull; import androidx.fragment.app.Fragment;
+public class Page3Fragment extends Fragment{ public View onCreateView(@NonNull LayoutInflater i,ViewGroup p,Bundle b){View v=i.inflate(R.layout.fragment_page3,p,false);((TextView)v.findViewById(R.id.txt3)).setText("V7-QUANTUM-REAL\nPage 3 Settings\nSwipe left/right");return v;}}

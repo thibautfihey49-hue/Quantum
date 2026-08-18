@@ -1,0 +1,14 @@
+plugins { id 'com.android.application' }
+android {
+ namespace 'com.v7.quantumfast'
+ compileSdk 34
+ defaultConfig { applicationId "com.v7.quantumfast"; minSdk 24; targetSdk 34; versionCode 1; versionName "1.0-QUANTUM" }
+ buildTypes { release { minifyEnabled false } }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+}
+dependencies {
+ implementation 'androidx.appcompat:appcompat:1.6.1'
+ implementation 'com.google.android.material:material:1.11.0'
+ implementation 'androidx.viewpager2:viewpager2:1.0.0'
+ implementation 'androidx.recyclerview:recyclerview:1.3.2'
+}
