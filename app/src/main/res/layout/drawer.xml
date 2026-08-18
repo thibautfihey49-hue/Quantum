@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#F50A0A14">
-    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#FF121216" android:padding="16dp" android:layout_marginTop="40dp">
-        <FrameLayout android:layout_width="match_parent" android:layout_height="52dp" android:background="@drawable/glass_color" android:padding="4dp">
-            <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
-                <TextView android:text="🔍" android:padding="12dp" android:layout_width="44dp" android:layout_height="match_parent" android:gravity="center"/>
-                <EditText android:id="@+id/search" android:hint="Rechercher apps, widgets..." android:textColor="#FFF" android:textColorHint="#66FFFFFF" android:background="@android:color/transparent" android:textSize="15sp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent"/>
-                <TextView android:id="@+id/close" android:text="✕" android:textColor="#FFF" android:background="@drawable/item_bg" android:padding="8dp" android:layout_margin="6dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
-            </LinearLayout>
-        </FrameLayout>
-        <TextView android:text="TOUTES LES APPS • GLISSE POUR SCROLL RAPIDE" android:textColor="#44FFFFFF" android:textSize="9sp" android:letterSpacing="0.2" android:layout_marginTop="12dp" android:layout_marginBottom="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        <androidx.recyclerview.widget.RecyclerView android:id="@+id/recycler" android:layout_width="match_parent" android:layout_height="match_parent" android:overScrollMode="never" android:clipToPadding="false" android:paddingBottom="20dp"/>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#F00A0A14">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/dialog_glass" android:padding="14dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="56dp" android:background="@drawable/search_glass" android:gravity="center_vertical" android:paddingLeft="14dp" android:paddingRight="8dp">
+            <TextView android:text="🔍" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <EditText android:id="@+id/search" android:hint="Rechercher apps, widgets..." android:textColor="#FFF" android:textColorHint="#88FFFFFF" android:background="@android:color/transparent" android:singleLine="true" android:layout_weight="1" android:layout_marginLeft="10dp" android:layout_width="0dp" android:layout_height="match_parent"/>
+            <TextView android:id="@+id/close" android:text="✕" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
+        </LinearLayout>
+        <TextView android:text="TOUTES LES APPS • GLISSE POUR SCROLL RAPIDE" android:textColor="#66FFFFFF" android:textSize="10sp" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/recycler" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_marginTop="10dp"/>
     </LinearLayout>
 </FrameLayout>
