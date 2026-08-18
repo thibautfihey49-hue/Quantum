@@ -1,2 +1,36 @@
-package com.v7.quantumfast; import android.content.Context; import android.util.AttributeSet; import android.view.*; import android.widget.FrameLayout;
-public class DragResizeLayout extends FrameLayout{ float dX,dY; boolean rs=false; public DragResizeLayout(Context c,AttributeSet a){super(c,a);} public boolean onTouchEvent(MotionEvent e){if(getChildCount()==0) return false; View ch=getChildAt(0); switch(e.getAction()){case MotionEvent.ACTION_DOWN: dX=e.getRawX()-getX(); dY=e.getRawY()-getY(); rs=e.getX()>getWidth()*0.8f && e.getY()>getHeight()*0.8f; return true; case MotionEvent.ACTION_MOVE: if(rs){ ViewGroup.LayoutParams lp=ch.getLayoutParams(); lp.width=(int)e.getX(); lp.height=(int)e.getY(); ch.setLayoutParams(lp);} else{setX(e.getRawX()-dX); setY(e.getRawY()-dY);} return true;} return super.onTouchEvent(e);} }
+package com.v7.quantumfast;
+import android.content.Context;
+import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+public class DragResizeLayout extends FrameLayout {
+    float dX,dY; boolean resizing=false;
+    public DragResizeLayout(Context c){ super(c); }
+    public DragResizeLayout(Context c, AttributeSet a){ super(c,a); }
+    public DragResizeLayout(Context c, AttributeSet a, int s){ super(c,a,s); }
+    @Override public boolean onTouchEvent(MotionEvent e){
+        if(getChildCount()==0) return false;
+        switch(e.getAction()){
+            case MotionEvent.ACTION_DOWN:
+                dX=e.getRawX()-getX(); dY=e.getRawY()-getY();
+                resizing = e.getX() > getWidth()*0.75f && e.getY() > getHeight()*0.75f;
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                if(resizing){
+                    int nw=(int)(e.getRawX()-getX());
+                    int nh=(int)(e.getRawY()-getY());
+                    if(nw>160 && nh>100){
+                        ViewGroup.LayoutParams lp=getLayoutParams();
+                        lp.width=nw; lp.height=nh;
+                        setLayoutParams(lp);
+                    }
+                }else{
+                    setX(e.getRawX()-dX); setY(e.getRawY()-dY);
+                }
+                return true;
+        }
+        return super.onTouchEvent(e);
+    }
+}
