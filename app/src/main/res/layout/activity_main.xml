@@ -1,23 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@android:color/transparent" android:fitsSystemWindows="false">
     <ImageView android:id="@+id/wallpaperView" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop"/>
-    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="56dp" android:paddingBottom="160dp" android:paddingLeft="12dp" android:paddingRight="12dp" android:overScrollMode="never" android:background="@android:color/transparent">
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="56dp" android:paddingBottom="180dp" android:paddingLeft="14dp" android:paddingRight="14dp" android:background="@android:color/transparent">
         <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
-            <FrameLayout android:layout_width="match_parent" android:layout_height="130dp" android:background="@drawable/glass_color" android:padding="16dp" android:layout_marginBottom="12dp">
-                <TextView android:id="@+id/clock" android:text="23:15" android:textColor="#FFF" android:textSize="38sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/date" android:text="MAR. 18 AOÛT • Paris" android:textColor="#CCFFFFFF" android:textSize="11sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/btnMenu" android:text="⋮" android:textSize="20sp" android:textColor="#FFF" android:background="@drawable/item_bg" android:padding="6dp" android:layout_gravity="top|end" android:layout_width="34dp" android:layout_height="34dp" android:gravity="center"/>
+            <FrameLayout android:layout_width="match_parent" android:layout_height="138dp" android:background="@drawable/glass_main" android:padding="18dp">
+                <TextView android:id="@+id/clock" android:text="23:29" android:textColor="#FFF" android:textSize="42sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/date" android:text="MAR. 18 AOÛT • Paris" android:textColor="#E6FFFFFF" android:textSize="12sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/btnMenu" android:text="⋮" android:textSize="18sp" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_gravity="top|end" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
             </FrameLayout>
-            <FrameLayout android:layout_width="match_parent" android:layout_height="100dp" android:background="@drawable/glass_weather" android:padding="14dp">
-                <TextView android:text="⛅" android:textSize="28sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:text="18°&#10;Partly Cloudy" android:textColor="#FFF" android:textSize="12sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <FrameLayout android:layout_width="match_parent" android:layout_height="110dp" android:background="@drawable/glass_main" android:layout_marginTop="14dp" android:padding="16dp">
+                <TextView android:text="⛅" android:textSize="30sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/weatherText" android:text="18°&#10;Partly Cloudy - Paris" android:textColor="#FFF" android:textSize="13sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </FrameLayout>
-            <FrameLayout android:id="@+id/addWidgetHint" android:layout_width="match_parent" android:layout_height="72dp" android:background="@drawable/glass" android:layout_marginTop="16dp">
-                <TextView android:text="+ Ajouter un widget" android:textColor="#88FFFFFF" android:textSize="13sp" android:layout_gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            </FrameLayout>
-            <LinearLayout android:id="@+id/widgetContainer" android:orientation="vertical" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            <!-- PLUS DE WIDGETS BUGGÉS - ON CACHE -->
+            <LinearLayout android:id="@+id/widgetContainer" android:orientation="vertical" android:layout_marginTop="14dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone"/>
         </LinearLayout>
     </ScrollView>
-    <!-- DOCK REMONTÉ DE 60dp POUR NE PLUS ÊTRE CACHÉ -->
-    <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:paddingLeft="10dp" android:paddingRight="10dp" android:paddingBottom="68dp"><LinearLayout android:id="@+id/dock" android:orientation="horizontal" android:gravity="center" android:background="@drawable/glass" android:padding="8dp" android:layout_width="match_parent" android:layout_height="70dp" android:elevation="8dp"><ImageView android:id="@+id/dPhone" android:padding="8dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="52dp"/><ImageView android:id="@+id/dMsg" android:padding="8dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="52dp"/><ImageView android:id="@+id/dExtra" android:padding="8dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="52dp"/><FrameLayout android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp" android:background="@drawable/glass_color"><ImageView android:id="@+id/dDrawer" android:src="@android:drawable/ic_menu_sort_by_size" android:tint="#FFF" android:layout_gravity="center" android:layout_width="22dp" android:layout_height="22dp"/></FrameLayout><ImageView android:id="@+id/dCam" android:padding="8dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="52dp"/><ImageView android:id="@+id/dChrome" android:padding="8dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="52dp"/></LinearLayout></FrameLayout>
+    <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingBottom="72dp">
+        <LinearLayout android:id="@+id/dock" android:orientation="horizontal" android:gravity="center" android:background="@drawable/glass_dock" android:padding="10dp" android:layout_width="match_parent" android:layout_height="78dp" android:elevation="12dp">
+            <ImageView android:id="@+id/dPhone" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
+            <ImageView android:id="@+id/dMsg" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
+            <ImageView android:id="@+id/dExtra" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
+            <FrameLayout android:layout_weight="1" android:layout_width="0dp" android:layout_height="58dp" android:background="@drawable/btn_glass"><ImageView android:id="@+id/dDrawer" android:src="@android:drawable/ic_menu_sort_by_size" android:tint="#FFF" android:layout_gravity="center" android:layout_width="22dp" android:layout_height="22dp"/></FrameLayout>
+            <ImageView android:id="@+id/dCam" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
+            <ImageView android:id="@+id/dChrome" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
+        </LinearLayout>
+    </FrameLayout>
 </FrameLayout>

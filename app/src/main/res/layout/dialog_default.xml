@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="320dp" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/dialog_glass" android:padding="20dp">
+    <TextView android:id="@+id/dTitle" android:text="🏠 Mettre Quantum par défaut?" android:textColor="#FFF" android:textSize="18sp" android:textStyle="bold" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <TextView android:id="@+id/dMsg" android:text="Pour avoir le fond One Piece, dock 6 apps et tiroir ultra fluide." android:textColor="#CCFFFFFF" android:textSize="13sp" android:layout_marginTop="10dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <LinearLayout android:orientation="horizontal" android:layout_marginTop="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+        <TextView android:id="@+id/bCancel" android:text="Plus tard" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="12dp" android:gravity="center" android:layout_weight="1" android:layout_marginEnd="8dp" android:layout_width="0dp" android:layout_height="wrap_content"/>
+        <TextView android:id="@+id/bOk" android:text="Définir" android:textColor="#000" android:background="@drawable/glass_main" android:padding="12dp" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+    </LinearLayout>
+</LinearLayout>
