@@ -1,2 +1,0 @@
-package com.v7.quantumfast; import android.os.Bundle; import android.view.*; import android.widget.TextView; import androidx.annotation.NonNull; import androidx.fragment.app.Fragment;
-public class Page2Fragment extends Fragment{ public View onCreateView(@NonNull LayoutInflater i,ViewGroup p,Bundle b){View v=i.inflate(R.layout.fragment_page2,p,false);DragResizeLayout d=v.findViewById(R.id.dragLayout);TextView t=new TextView(getContext());t.setText("WIDGET QUANTUM\nGlisse / Resize\nPage 2");t.setPadding(40,40,40,40);d.addView(t);return v;}}
