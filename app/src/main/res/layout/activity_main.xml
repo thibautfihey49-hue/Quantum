@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:fitsSystemWindows="false">
-    <ImageView android:id="@+id/wallpaperView" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:adjustViewBounds="false"/>
-    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="52dp" android:paddingBottom="190dp" android:paddingLeft="14dp" android:paddingRight="14dp" android:overScrollMode="never">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000000" android:fitsSystemWindows="false">
+    <!-- FOND QUI REMPLIT VRAIMENT TOUT -->
+    <ImageView android:id="@+id/wallpaperView" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:adjustViewBounds="false" android:layout_gravity="center" android:background="#000000"/>
+    <!-- CONTENU -->
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="52dp" android:paddingBottom="190dp" android:paddingLeft="14dp" android:paddingRight="14dp" android:overScrollMode="never" android:background="@android:color/transparent">
         <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
             <FrameLayout android:layout_width="match_parent" android:layout_height="132dp" android:background="@drawable/glass_main" android:padding="18dp">
-                <TextView android:id="@+id/clock" android:text="23:53" android:textColor="#FFF" android:textSize="44sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/date" android:text="MAR. 18 AOÛT • Paris" android:textColor="#E6FFFFFF" android:textSize="12sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/clock" android:text="00:10" android:textColor="#FFF" android:textSize="44sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/date" android:text="MER. 19 AOÛT • Paris" android:textColor="#E6FFFFFF" android:textSize="12sp" android:layout_gravity="bottom|start" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 <TextView android:id="@+id/btnMenu" android:text="⋮" android:textSize="18sp" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_gravity="top|end" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
             </FrameLayout>
-
             <FrameLayout android:layout_width="match_parent" android:layout_height="54dp" android:background="@drawable/search_glass" android:layout_marginTop="16dp" android:paddingLeft="14dp" android:paddingRight="8dp">
                 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
                     <TextView android:text="🔍" android:textSize="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -16,9 +17,7 @@
                     <TextView android:id="@+id/clearApps" android:text="✕" android:textColor="#88FFFFFF" android:visibility="gone" android:padding="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </LinearLayout>
             </FrameLayout>
-
-            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSuggestions" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:background="@drawable/glass_main" android:padding="8dp" android:layout_marginTop="8dp" android:maxHeight="340dp"/>
-
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSuggestions" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:background="@drawable/glass_main" android:padding="8dp" android:layout_marginTop="8dp"/>
             <FrameLayout android:layout_width="match_parent" android:layout_height="54dp" android:background="@drawable/glass_main" android:layout_marginTop="12dp" android:paddingLeft="14dp" android:paddingRight="8dp">
                 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
                     <TextView android:text="🌐" android:textSize="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -26,15 +25,14 @@
                     <TextView android:id="@+id/btnWebGo" android:text="➤" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_marginLeft="8dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
                 </LinearLayout>
             </FrameLayout>
-
-            <LinearLayout android:id="@+id/favHeader" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+            <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
                 <TextView android:text="⭐ Favoris" android:textColor="#FFF" android:textSize="13sp" android:textStyle="bold" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
                 <TextView android:id="@+id/btnAddFav" android:text="+ Ajouter site" android:textColor="#FFF" android:textSize="11sp" android:background="@drawable/btn_glass" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingTop="6dp" android:paddingBottom="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </LinearLayout>
             <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvFavorites" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp"/>
         </LinearLayout>
     </ScrollView>
-    <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingBottom="72dp">
+    <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingBottom="72dp" android:background="@android:color/transparent">
         <LinearLayout android:id="@+id/dock" android:orientation="horizontal" android:gravity="center" android:background="@drawable/glass_dock" android:padding="10dp" android:layout_width="match_parent" android:layout_height="78dp" android:elevation="12dp">
             <ImageView android:id="@+id/dPhone" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
             <ImageView android:id="@+id/dMsg" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
