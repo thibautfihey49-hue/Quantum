@@ -1,1 +1,0 @@
-package com.v7.quantumfast; import android.graphics.drawable.Drawable; public class AppInfo{ public String name,pkg; public Drawable icon; public AppInfo(String n,String p,Drawable i){name=n;pkg=p;icon=i;} }
