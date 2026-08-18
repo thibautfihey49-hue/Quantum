@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#E6000000">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:layout_marginTop="60dp" android:orientation="vertical" android:background="#FF121212" android:padding="12dp">
-        <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
-            <EditText android:id="@+id/search" android:hint="Rechercher" android:textColor="#FFF" android:textColorHint="#44FFFFFF" android:background="@drawable/glass" android:padding="12dp" android:textSize="14sp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="44dp"/>
-            <TextView android:id="@+id/close" android:text="✕" android:textColor="#FFF" android:padding="12dp" android:background="@drawable/item_bg" android:layout_marginStart="8dp" android:layout_width="44dp" android:layout_height="44dp" android:gravity="center"/>
-        </LinearLayout>
-        <androidx.recyclerview.widget.RecyclerView android:id="@+id/recycler" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="match_parent" android:overScrollMode="never"/>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#F50A0A14">
+    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#FF121216" android:padding="16dp" android:layout_marginTop="40dp">
+        <FrameLayout android:layout_width="match_parent" android:layout_height="52dp" android:background="@drawable/glass_color" android:padding="4dp">
+            <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
+                <TextView android:text="🔍" android:padding="12dp" android:layout_width="44dp" android:layout_height="match_parent" android:gravity="center"/>
+                <EditText android:id="@+id/search" android:hint="Rechercher apps, widgets..." android:textColor="#FFF" android:textColorHint="#66FFFFFF" android:background="@android:color/transparent" android:textSize="15sp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent"/>
+                <TextView android:id="@+id/close" android:text="✕" android:textColor="#FFF" android:background="@drawable/item_bg" android:padding="8dp" android:layout_margin="6dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
+            </LinearLayout>
+        </FrameLayout>
+        <TextView android:text="TOUTES LES APPS • GLISSE POUR SCROLL RAPIDE" android:textColor="#44FFFFFF" android:textSize="9sp" android:letterSpacing="0.2" android:layout_marginTop="12dp" android:layout_marginBottom="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/recycler" android:layout_width="match_parent" android:layout_height="match_parent" android:overScrollMode="never" android:clipToPadding="false" android:paddingBottom="20dp"/>
     </LinearLayout>
 </FrameLayout>
