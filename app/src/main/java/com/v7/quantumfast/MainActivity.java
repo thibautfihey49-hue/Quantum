@@ -12,6 +12,7 @@ public class MainActivity extends Activity {
     @Override protected void onResume(){ super.onResume(); clearSearchNow(); }
 protected void onCreate(Bundle b){
         super.onCreate(b);
+ registerTimeTick();
         getWindow().setStatusBarColor(0); getWindow().setNavigationBarColor(0);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
@@ -159,6 +160,22 @@ void clearSearchNow(){
  }catch(Exception e){}
 }
 
+
+void registerTimeTick(){
+ try{ if(timeReceiver!=null) unregisterReceiver(timeReceiver); }catch(Exception e){}
+ timeReceiver = new android.content.BroadcastReceiver(){
+  public void onReceive(android.content.Context c, android.content.Intent i){
+   try{ updateClock(); }catch(Exception e){}
+  }
+ };
+ registerReceiver(timeReceiver, new android.content.IntentFilter(android.content.Intent.ACTION_TIME_TICK));
+}
+void updateClock(){
+ try{
+  android.widget.TextView tv=findViewById(R.id.clock);
+  if(tv!=null) tv.setText(new java.text.SimpleDateFormat("HH:mm", java.util.Locale.FRANCE).format(new java.util.Date()));
+ }catch(Exception e){}
+}
 void saveFolders(){ StringBuilder sb=new StringBuilder(); for(int i=0;i<folders.size();i++){ if(i>0) sb.append(";;"); sb.append(folders.get(i).name).append("||").append(String.join(",",folders.get(i).pkgs)); } prefs.edit().putString("folders",sb.toString()).apply(); }
     void showCreateFolderDialog(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_folder_create); EditText nameEd=dlg.findViewById(R.id.folderName); RecyclerView rv=dlg.findViewById(R.id.folderAppList); rv.setHasFixedSize(true); rv.setItemAnimator(null); rv.setLayoutManager(new LinearLayoutManager(this)); List<ResolveInfo> all; synchronized(cache){ all=new ArrayList<>(cache); } Set<String> selected=new HashSet<>(); RecyclerView.Adapter adapter=new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; CheckBox cb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label); cb=v.findViewById(R.id.check);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app_check,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=all.get(pos); String pkg=ri.activityInfo.packageName; String lbl=labelCache.getOrDefault(pkg, ri.loadLabel(getPackageManager()).toString()); h.lb.setText(lbl); Drawable d=iconCache.get(pkg); if(d!=null) h.ic.setImageDrawable(d); h.cb.setOnCheckedChangeListener(null); h.cb.setChecked(selected.contains(pkg)); h.cb.setOnCheckedChangeListener((bb,is)->{ if(is) selected.add(pkg); else selected.remove(pkg); }); h.itemView.setOnClickListener(v->{ if(selected.contains(pkg)) selected.remove(pkg); else selected.add(pkg); h.cb.setChecked(selected.contains(pkg)); }); } public int getItemCount(){ return all.size(); } }; rv.setAdapter(adapter); dlg.findViewById(R.id.bCancel).setOnClickListener(v->dlg.dismiss()); dlg.findViewById(R.id.bCreate).setOnClickListener(v->{ String n=nameEd.getText().toString().trim(); if(n.isEmpty()) n="Dossier"; if(selected.isEmpty()){ Toast.makeText(this,"Coche au moins 1 app",0).show(); return; } folders.add(new Folder(n,new ArrayList<>(selected))); saveFolders(); folderAd.notifyDataSetChanged(); dlg.dismiss(); }); dlg.show(); }
     void showFolderContent(Folder f){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.setContentView(R.layout.picker_dock); RecyclerView rv=dlg.findViewById(R.id.recyclerDock); rv.setLayoutManager(new GridLayoutManager(this,4)); List<ResolveInfo> list=new ArrayList<>(); synchronized(cache){ for(ResolveInfo ri:cache) if(f.pkgs.contains(ri.activityInfo.packageName)) list.add(ri); } rv.setAdapter(new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=list.get(pos); h.lb.setText(labelCache.getOrDefault(ri.activityInfo.packageName, ri.loadLabel(getPackageManager()).toString())); Drawable d=iconCache.get(ri.activityInfo.packageName); if(d!=null) h.ic.setImageDrawable(d); h.itemView.setOnClickListener(v->{ launch(ri.activityInfo.packageName); dlg.dismiss(); }); } public int getItemCount(){ return list.size(); } }); dlg.show(); }
