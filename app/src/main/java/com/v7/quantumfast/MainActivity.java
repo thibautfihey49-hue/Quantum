@@ -67,10 +67,18 @@ public class MainActivity extends Activity {
         bAccess.setOnClickListener(v-> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         cacheText.setText("Scan..."); junkText.setText("Scan...");
         exec.execute(()->{
-            long[] res=scanRealCache(); long total=res[0]; int count=(int)res[1];
+            long[] res=scanRealCache();
+            final long fTotal=res[0]; final int fCount=(int)res[1];
             List<File> junks=scanJunk(); long jSize=0; for(File f:junks) jSize+=f.length();
+            final long fJSize=jSize;
             StringBuilder sb=new StringBuilder(); for(int i=0;i<Math.min(6,junks.size());i++) sb.append("• ").append(junks.get(i).getName()).append("\n");
-            main.post(()->{ cacheText.setText(formatMB(total)); cacheCount.setText(count+" apps"); junkText.setText(formatMB(jSize)); junkList.setText(sb.length()==0?"Aucun":sb.toString()); });
+            final String fSb=sb.toString();
+            main.post(()->{
+                cacheText.setText(formatMB(fTotal));
+                cacheCount.setText(fCount+" apps");
+                junkText.setText(formatMB(fJSize));
+                junkList.setText(fSb.isEmpty()?"Aucun":fSb);
+            });
         });
         dlg.findViewById(R.id.bBoostAll).setOnClickListener(v->{
             if(!hasUsageAccess()){ Toast.makeText(this,"Active accès utilisation",1).show(); startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)); return; }
