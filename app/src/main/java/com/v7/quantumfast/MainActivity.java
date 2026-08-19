@@ -1,5 +1,5 @@
 package com.v7.quantumfast;
-import android.app.Activity; import android.app.AlarmManager; import android.content.*; import android.content.pm.*; import android.graphics.*; import android.graphics.drawable.Drawable; import android.net.Uri; import android.os.*; import android.view.*; import android.view.inputmethod.EditorInfo; import android.widget.*; import androidx.core.app.ActivityCompat; import androidx.core.content.ContextCompat; import androidx.recyclerview.widget.*; import java.io.*; import java.net.*; import java.text.SimpleDateFormat; import java.util.*; import java.util.concurrent.*;
+import android.app.Activity; import android.app.ActivityManager; import android.content.*; import android.content.pm.*; import android.graphics.*; import android.graphics.drawable.Drawable; import android.net.Uri; import android.os.*; import android.view.*; import android.view.inputmethod.EditorInfo; import android.widget.*; import androidx.core.app.ActivityCompat; import androidx.core.content.ContextCompat; import androidx.recyclerview.widget.*; import java.io.*; import java.util.*; import java.util.concurrent.*; import java.text.SimpleDateFormat;
 public class MainActivity extends Activity {
     ImageView wallpaperView; ExecutorService exec = Executors.newSingleThreadExecutor(); Handler main = new Handler(Looper.getMainLooper());
     List<ResolveInfo> cache = Collections.synchronizedList(new ArrayList<>()); Map<String,Drawable> iconCache = new ConcurrentHashMap<>(); Map<String,String> labelCache = new ConcurrentHashMap<>(); long lastClick=0;
@@ -7,6 +7,8 @@ public class MainActivity extends Activity {
     RecyclerView rvSugg, rvFav, rvFolders; List<ResolveInfo> suggList = new ArrayList<>(); SuggAdapter suggAd;
     static class Fav{ String name; String url; Fav(String n,String u){name=n;url=u;} } List<Fav> favs = new ArrayList<>(); FavAdapter favAd;
     static class Folder{ String name; List<String> pkgs; Folder(String n,List<String> p){name=n;pkgs=p;} } List<Folder> folders = new ArrayList<>(); FolderAdapter folderAd;
+    long totalJunk=0; long totalCache=0; List<File> junkFiles=new ArrayList<>();
+
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
         getWindow().setStatusBarColor(0); getWindow().setNavigationBarColor(0);
@@ -21,7 +23,6 @@ public class MainActivity extends Activity {
         rvSugg.setLayoutManager(new LinearLayoutManager(this)); suggAd=new SuggAdapter(); rvSugg.setAdapter(suggAd);
         rvFav.setLayoutManager(new GridLayoutManager(this,4)); loadFavs(); favAd=new FavAdapter(); rvFav.setAdapter(favAd);
         rvFolders.setLayoutManager(new GridLayoutManager(this,2)); loadFolders(); folderAd=new FolderAdapter(); rvFolders.setAdapter(folderAd);
-        // PLUS DE BLUR - net
         preloadFast(); setupAtAGlanceSimple(); setupDock(); loadWallpaperFast();
         EditText searchApps=findViewById(R.id.searchAppsMain); EditText searchWeb=findViewById(R.id.searchWebMain); TextView clear=findViewById(R.id.clearApps);
         final Runnable[] debounce=new Runnable[1];
@@ -44,14 +45,117 @@ public class MainActivity extends Activity {
         findViewById(R.id.btnWebGo).setOnClickListener(v->{ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooserGlass(q); });
         findViewById(R.id.btnAddFav).setOnClickListener(v->showAddFavDialog());
         findViewById(R.id.btnAddFolder).setOnClickListener(v->showCreateFolderDialog());
+        findViewById(R.id.btnBooster).setOnClickListener(v->showBoosterDialog());
         main.postDelayed(()->{ if(!isDefaultLauncher()) showGlassDialog(); }, 800);
         findViewById(R.id.btnMenu).setOnClickListener(v->showGlassMenu());
     }
+
+    // PERMS
     void requestAllPerms(){ List<String> need=new ArrayList<>(); String[] all={android.Manifest.permission.READ_MEDIA_IMAGES, android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS}; for(String p:all){ if(ContextCompat.checkSelfPermission(this,p)!=PackageManager.PERMISSION_GRANTED) need.add(p); } if(!need.isEmpty()) ActivityCompat.requestPermissions(this, need.toArray(new String[0]), 999); }
-    void setupAtAGlanceSimple(){
-        clock();
-        try{ IntentFilter f=new IntentFilter(Intent.ACTION_BATTERY_CHANGED); BroadcastReceiver br=new BroadcastReceiver(){ public void onReceive(Context c,Intent i){ int lvl=i.getIntExtra("level",-1); TextView tv=findViewById(R.id.batteryInfo); if(tv!=null && lvl!=-1) tv.setText("🔋 "+lvl+"%"); } }; registerReceiver(br,f); }catch(Exception e){}
+
+    // AT A GLANCE SIMPLE
+    void setupAtAGlanceSimple(){ clock(); try{ IntentFilter f=new IntentFilter(Intent.ACTION_BATTERY_CHANGED); BroadcastReceiver br=new BroadcastReceiver(){ public void onReceive(Context c,Intent i){ int lvl=i.getIntExtra("level",-1); TextView tv=findViewById(R.id.batteryInfo); if(tv!=null && lvl!=-1) tv.setText("🔋 "+lvl+"%"); } }; registerReceiver(br,f); }catch(Exception e){} }
+
+    // BOOSTER DIALOG
+    void showBoosterDialog(){
+        android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_booster);
+        ProgressBar ramBar=dlg.findViewById(R.id.ramBar); TextView ramText=dlg.findViewById(R.id.ramText); TextView ramFree=dlg.findViewById(R.id.ramFree);
+        TextView cacheText=dlg.findViewById(R.id.cacheText); TextView junkText=dlg.findViewById(R.id.junkText); TextView junkList=dlg.findViewById(R.id.junkList);
+        // RAM INFO
+        ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE); ActivityManager.MemoryInfo mi=new ActivityManager.MemoryInfo(); am.getMemoryInfo(mi);
+        long total=mi.totalMem; long avail=mi.availMem; long used=total-avail;
+        int pct=(int)(used*100/total); ramBar.setProgress(pct);
+        ramText.setText("Utilisée: "+formatMB(used)+" / "+formatMB(total)); ramFree.setText("Dispo: "+formatMB(avail));
+        // SCAN CACHE + JUNK en fond
+        cacheText.setText("Scan..."); junkText.setText("Scan..."); junkList.setText("Analyse fichiers inutiles...");
+        exec.execute(()->{
+            totalCache=calcCacheSize(); List<File> junks=scanJunk(); long jSize=0; for(File f:junks) jSize+=f.length(); totalJunk=jSize; junkFiles=junks;
+            StringBuilder sb=new StringBuilder(); for(int i=0;i<Math.min(8,junks.size());i++) sb.append("• ").append(junks.get(i).getName()).append(" (").append(formatMB(junks.get(i).length())).append(")\n");
+            long fCache=totalCache; long fJunk=jSize;
+            main.post(()->{ cacheText.setText(formatMB(fCache)); junkText.setText(formatMB(fJunk)); junkList.setText(sb.length()==0?"Aucun fichier inutile trouvé":sb.toString()+"\n+ "+(junks.size()>8?junks.size()-8+" autres":"")); });
+        });
+        dlg.findViewById(R.id.bCleanRam).setOnClickListener(v->{
+            int killed=cleanRam(); Toast.makeText(this, "RAM: "+killed+" apps fermées",0).show();
+            ActivityManager.MemoryInfo mi2=new ActivityManager.MemoryInfo(); am.getMemoryInfo(mi2);
+            long used2=mi2.totalMem-mi2.availMem; ramBar.setProgress((int)(used2*100/mi2.totalMem)); ramText.setText("Utilisée: "+formatMB(used2)+" / "+formatMB(mi2.totalMem)); ramFree.setText("Dispo: "+formatMB(mi2.availMem));
+        });
+        dlg.findViewById(R.id.bCleanCache).setOnClickListener(v->{
+            exec.execute(()->{ long freed=cleanCache(); main.post(()->{ cacheText.setText("0 MB"); Toast.makeText(this,"Cache vidé: "+formatMB(freed),0).show(); }); });
+        });
+        dlg.findViewById(R.id.bCleanJunk).setOnClickListener(v->{
+            exec.execute(()->{ long freed=cleanJunkFiles(); main.post(()->{ junkText.setText("0 MB"); junkList.setText("Nettoyé"); Toast.makeText(this,"Fichiers supprimés: "+formatMB(freed),0).show(); }); });
+        });
+        dlg.findViewById(R.id.bBoostAll).setOnClickListener(v->{
+            exec.execute(()->{
+                int killed=cleanRam(); long c1=cleanCache(); long c2=cleanJunkFiles();
+                main.post(()->{
+                    ramBar.setProgress(20); cacheText.setText("0 MB"); junkText.setText("0 MB"); junkList.setText("Tout nettoyé ✅");
+                    Toast.makeText(this,"BOOST: "+killed+" RAM + "+formatMB(c1+c2)+" libérés",1).show();
+                });
+            });
+        });
+        dlg.findViewById(R.id.bCloseBooster).setOnClickListener(v->dlg.dismiss());
+        dlg.show();
     }
+
+    // RAM CLEANER RÉEL
+    int cleanRam(){
+        int killed=0; try{
+            ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);
+            List<ActivityManager.RunningAppProcessInfo> procs=am.getRunningAppProcesses();
+            if(procs==null) return 0;
+            String self=getPackageName();
+            for(ActivityManager.RunningAppProcessInfo p:procs){
+                if(p.pkgList==null) continue;
+                boolean isSelf=false; for(String pkg:p.pkgList) if(self.equals(pkg)) { isSelf=true; break; }
+                if(isSelf) continue;
+                if(p.importance>=ActivityManager.RunningAppProcessInfo.IMPORTANCE_BACKGROUND){
+                    try{ for(String pkg:p.pkgList){ am.killBackgroundProcesses(pkg); killed++; } }catch(Exception e){}
+                }
+            }
+            System.gc();
+        }catch(Exception e){} return killed;
+    }
+
+    // CACHE CALC & CLEAN
+    long calcCacheSize(){
+        long size=0; try{
+            File[] dirs={getCacheDir(), getExternalCacheDir(), getCodeCacheDir()};
+            for(File d:dirs) if(d!=null) size+=getFolderSize(d);
+            // Scan Android/data cache qu'on peut lire
+            File ext=Environment.getExternalStorageDirectory();
+            if(ext!=null){ File androidData=new File(ext,"Android/data"); if(androidData.exists()){ File[] pkgs=androidData.listFiles(); if(pkgs!=null) for(File pkg:pkgs){ File c=new File(pkg,"cache"); if(c.exists()) size+=getFolderSize(c); } } }
+        }catch(Exception e){} return size;
+    }
+    long cleanCache(){
+        long freed=0; try{
+            freed+=deleteFolderContent(getCacheDir()); freed+=deleteFolderContent(getExternalCacheDir()); freed+=deleteFolderContent(getCodeCacheDir());
+            File ext=Environment.getExternalStorageDirectory();
+            if(ext!=null){ File androidData=new File(ext,"Android/data"); if(androidData.exists()){ File[] pkgs=androidData.listFiles(); if(pkgs!=null) for(File pkg:pkgs){ File c=new File(pkg,"cache"); if(c.exists()) freed+=deleteFolderContent(c); } } }
+        }catch(Exception e){} return freed;
+    }
+
+    // JUNK FILES
+    List<File> scanJunk(){
+        List<File> out=new ArrayList<>(); try{
+            // Dossiers à scanner
+            List<File> roots=new ArrayList<>();
+            roots.add(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS));
+            roots.add(new File(Environment.getExternalStorageDirectory(),"Download"));
+            roots.add(new File(Environment.getExternalStorageDirectory(),"DCIM/.thumbnails"));
+            roots.add(getCacheDir()); roots.add(getExternalCacheDir());
+            String[] exts={".tmp",".temp",".log",".bak",".cache",".thumbdata"};
+            for(File root:roots){ if(root==null||!root.exists()) continue; File[] files=root.listFiles(); if(files==null) continue; for(File f:files){ if(f.isFile()){ String n=f.getName().toLowerCase(); for(String ex:exts) if(n.endsWith(ex)){ out.add(f); break; } if(n.startsWith(".")||n.contains("thumb")) out.add(f); } } }
+            // Fichiers >7 jours dans Download
+            File dl=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            if(dl!=null&&dl.exists()){ File[] fs=dl.listFiles(); if(fs!=null) for(File f:fs) if(f.isFile()&&f.lastModified()<System.currentTimeMillis()-7L*24*3600*1000) out.add(f); }
+        }catch(Exception e){} return out;
+    }
+    long cleanJunkFiles(){ long freed=0; try{ for(File f:scanJunk()){ if(f.exists()){ freed+=f.length(); f.delete(); } } }catch(Exception e){} return freed; }
+    long getFolderSize(File dir){ long s=0; if(dir==null||!dir.exists()) return 0; try{ File[] files=dir.listFiles(); if(files==null) return 0; for(File f:files){ if(f.isFile()) s+=f.length(); else s+=getFolderSize(f); } }catch(Exception e){} return s; }
+    long deleteFolderContent(File dir){ long s=0; if(dir==null||!dir.exists()) return 0; try{ File[] files=dir.listFiles(); if(files==null) return 0; for(File f:files){ if(f.isFile()){ s+=f.length(); f.delete(); } else { s+=getFolderSize(f); deleteFolderContent(f); } } }catch(Exception e){} return s; }
+    String formatMB(long bytes){ if(bytes<1024) return bytes+" B"; if(bytes<1024*1024) return (bytes/1024)+" KB"; return String.format("%.1f MB", bytes/1024f/1024f); }
+
     String[] parseEngine(String q){ String low=q.toLowerCase().trim(); if(low.startsWith("yt ")||low.startsWith("yt:")||low.startsWith("youtube ")){ String qq=q.replaceFirst("(?i)^(yt |yt:|youtube )",""); return new String[]{"yt","https://www.youtube.com/results?search_query="+Uri.encode(qq),qq}; } if(low.startsWith("d ")||low.startsWith("duck ")){ String qq=q.replaceFirst("(?i)^(d |duck )",""); return new String[]{"d","https://duckduckgo.com/?q="+Uri.encode(qq),qq}; } if(low.startsWith("w ")||low.startsWith("wiki ")){ String qq=q.replaceFirst("(?i)^(w |wiki )",""); return new String[]{"w","https://fr.wikipedia.org/wiki/Special:Search?search="+Uri.encode(qq),qq}; } if(q.startsWith("http")) return new String[]{"g",q,q}; return new String[]{"g","https://www.google.com/search?q="+Uri.encode(q),q}; }
     void showBrowserChooserGlass(String query){ String[] parsed=parseEngine(query); String url=parsed[1]; String display=parsed[2]; Intent base = new Intent(Intent.ACTION_VIEW, Uri.parse(url)); List<ResolveInfo> browsers = getPackageManager().queryIntentActivities(base, 0); if(browsers.isEmpty()) return; android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_chooser); ((TextView)dlg.findViewById(R.id.cTitle)).setText((parsed[0].equals("yt")?"YouTube: ":parsed[0].equals("d")?"Duck: ":parsed[0].equals("w")?"Wiki: ":"Google: ")+display); ((TextView)dlg.findViewById(R.id.cUrl)).setText(url); RecyclerView rv=dlg.findViewById(R.id.cList); rv.setHasFixedSize(true); rv.setItemAnimator(null); rv.setLayoutManager(new LinearLayoutManager(this)); rv.setAdapter(new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView name; H(View v){super(v); ic=v.findViewById(R.id.cIcon); name=v.findViewById(R.id.cName);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_chooser,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=browsers.get(pos); h.name.setText(ri.loadLabel(getPackageManager())); try{ h.ic.setImageDrawable(ri.loadIcon(getPackageManager())); }catch(Exception e){} h.itemView.setOnClickListener(v->{ try{ Intent intent=new Intent(Intent.ACTION_VIEW, Uri.parse(url)); intent.setPackage(ri.activityInfo.packageName); startActivity(intent); dlg.dismiss(); }catch(Exception e){} }); } public int getItemCount(){ return browsers.size(); } }); dlg.findViewById(R.id.cCancel).setOnClickListener(v->dlg.dismiss()); dlg.show(); }
     void loadFolders(){ folders.clear(); String saved=prefs.getString("folders",""); if(saved.isEmpty()) return; try{ for(String f:saved.split(";;")){ String[] parts=f.split("\\|\\|"); if(parts.length>=2){ String name=parts[0]; List<String> pkgs=new ArrayList<>(Arrays.asList(parts[1].split(","))); folders.add(new Folder(name,pkgs)); } } }catch(Exception e){} }
@@ -60,7 +164,7 @@ public class MainActivity extends Activity {
     void showFolderContent(Folder f){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.setContentView(R.layout.picker_dock); RecyclerView rv=dlg.findViewById(R.id.recyclerDock); rv.setLayoutManager(new GridLayoutManager(this,4)); List<ResolveInfo> list=new ArrayList<>(); synchronized(cache){ for(ResolveInfo ri:cache) if(f.pkgs.contains(ri.activityInfo.packageName)) list.add(ri); } rv.setAdapter(new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=list.get(pos); h.lb.setText(labelCache.getOrDefault(ri.activityInfo.packageName, ri.loadLabel(getPackageManager()).toString())); Drawable d=iconCache.get(ri.activityInfo.packageName); if(d!=null) h.ic.setImageDrawable(d); h.itemView.setOnClickListener(v->{ launch(ri.activityInfo.packageName); dlg.dismiss(); }); } public int getItemCount(){ return list.size(); } }); dlg.show(); }
     boolean isDefaultLauncher(){ Intent home = new Intent(Intent.ACTION_MAIN); home.addCategory(Intent.CATEGORY_HOME); ResolveInfo ri = getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY); return ri!=null && ri.activityInfo!=null && getPackageName().equals(ri.activityInfo.packageName); }
     void showGlassDialog(){ if(prefs.getBoolean("asked_default", false)) return; android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ prefs.edit().putBoolean("asked_default", true).apply(); dlg.dismiss(); try{ Intent i = new Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS); startActivity(i);}catch(Exception e){} }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->{ prefs.edit().putBoolean("asked_default", true).apply(); dlg.dismiss(); }); dlg.show(); }
-    void showGlassMenu(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); ((TextView)dlg.findViewById(R.id.dTitle)).setText("Quantum"); ((TextView)dlg.findViewById(R.id.dMsg)).setText("Dossiers: "+folders.size()+"\nMoteurs: yt / d / w"); ((TextView)dlg.findViewById(R.id.bOk)).setText("Fond"); ((TextView)dlg.findViewById(R.id.bCancel)).setText("Tiroir"); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ dlg.dismiss(); pickWallpaperInternal(); }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->{ dlg.dismiss(); openDrawerWithQuery(""); }); dlg.show(); }
+    void showGlassMenu(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); ((TextView)dlg.findViewById(R.id.dTitle)).setText("Quantum Booster"); ((TextView)dlg.findViewById(R.id.dMsg)).setText("Dossiers: "+folders.size()+"\nMoteurs: yt / d / w\nCache: "+formatMB(totalCache)+"\nJunk: "+formatMB(totalJunk)); ((TextView)dlg.findViewById(R.id.bOk)).setText("Fond"); ((TextView)dlg.findViewById(R.id.bCancel)).setText("Tiroir"); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ dlg.dismiss(); pickWallpaperInternal(); }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->{ dlg.dismiss(); openDrawerWithQuery(""); }); dlg.show(); }
     void loadWallpaperFast(){ String uriStr=prefs.getString("custom_wallpaper_uri",null); if(uriStr==null) return; exec.execute(()->{ try{ Uri uri=Uri.parse(uriStr); InputStream is=getContentResolver().openInputStream(uri); if(is==null) return; BitmapFactory.Options opts=new BitmapFactory.Options(); opts.inJustDecodeBounds=true; BitmapFactory.decodeStream(is,null,opts); is.close(); int reqW=getResources().getDisplayMetrics().widthPixels; int reqH=getResources().getDisplayMetrics().heightPixels; int sample=1; while(opts.outWidth/sample/2>=reqW && opts.outHeight/sample/2>=reqH) sample*=2; InputStream is2=getContentResolver().openInputStream(uri); if(is2==null) return; BitmapFactory.Options o2=new BitmapFactory.Options(); o2.inSampleSize=sample; o2.inPreferredConfig=Bitmap.Config.RGB_565; Bitmap bmp=BitmapFactory.decodeStream(is2,null,o2); is2.close(); main.post(()->{ if(bmp!=null &&!bmp.isRecycled()) wallpaperView.setImageBitmap(bmp); }); }catch(Exception e){} }); }
     void pickWallpaperInternal(){ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("image/*"); i.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivityForResult(i,201); }
     @Override protected void onActivityResult(int rc,int res,Intent data){ if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri uri=data.getData(); try{ getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri", uri.toString()).apply(); loadWallpaperFast(); } }
