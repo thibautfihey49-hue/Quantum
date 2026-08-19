@@ -212,7 +212,7 @@ void registerBatteryReceiver(){
     if(tv!=null){
      String txt = tv.getText().toString();
      // garde MFR + date, change juste le %
-     if(txt.contains("%")) txt = txt.replaceAll("\d+%",""+pct+"%");
+     if(txt.contains("%")) txt = txt.replaceAll("\\d+%",""+pct+"%");
      else txt = txt+" "+pct+"%";
      // tu peux aussi juste appeler updateClock() qui refait tout
      updateClock();
