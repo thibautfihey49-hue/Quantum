@@ -3,6 +3,7 @@ import android.app.AppOpsManager; import android.app.Activity; import android.ap
 public class MainActivity extends Activity {
     android.content.BroadcastReceiver timeReceiver;
     android.content.BroadcastReceiver pkgReceiver;
+    android.content.BroadcastReceiver batteryReceiver;
     boolean cacheLoaded=false;
 
  EditText searchApps; EditText searchWeb;
@@ -18,6 +19,7 @@ protected void onCreate(Bundle b){
         super.onCreate(b);
  registerTimeTick();
  registerPkgReceiver();
+ registerBatteryReceiver();
         getWindow().setStatusBarColor(0); getWindow().setNavigationBarColor(0);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
@@ -195,6 +197,30 @@ void registerPkgReceiver(){
  f.addAction(android.content.Intent.ACTION_PACKAGE_REMOVED);
  f.addDataScheme("package");
  registerReceiver(pkgReceiver, f);
+}
+
+void registerBatteryReceiver(){
+ try{ if(batteryReceiver!=null) unregisterReceiver(batteryReceiver); }catch(Exception e){}
+ batteryReceiver = new android.content.BroadcastReceiver(){
+  public void onReceive(android.content.Context c, android.content.Intent i){
+   try{
+    int level = i.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+    int scale = i.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1);
+    int pct = level>=0 && scale>0 ? (level*100)/scale : 100;
+    android.widget.TextView tv=findViewById(R.id.battery);
+    if(tv==null) tv=findViewById(R.id.clock); // fallback si tu as tout dans la même view
+    if(tv!=null){
+     String txt = tv.getText().toString();
+     // garde MFR + date, change juste le %
+     if(txt.contains("%")) txt = txt.replaceAll("\d+%",""+pct+"%");
+     else txt = txt+" "+pct+"%";
+     // tu peux aussi juste appeler updateClock() qui refait tout
+     updateClock();
+    }
+   }catch(Exception e){}
+  }
+ };
+ registerReceiver(batteryReceiver, new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
 }
 void saveFolders(){ StringBuilder sb=new StringBuilder(); for(int i=0;i<folders.size();i++){ if(i>0) sb.append(";;"); sb.append(folders.get(i).name).append("||").append(String.join(",",folders.get(i).pkgs)); } prefs.edit().putString("folders",sb.toString()).apply(); }
     void showCreateFolderDialog(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_folder_create); EditText nameEd=dlg.findViewById(R.id.folderName); RecyclerView rv=dlg.findViewById(R.id.folderAppList); rv.setHasFixedSize(true); rv.setItemAnimator(null); rv.setLayoutManager(new LinearLayoutManager(this)); List<ResolveInfo> all; synchronized(cache){ all=new ArrayList<>(cache); } Set<String> selected=new HashSet<>(); RecyclerView.Adapter adapter=new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; CheckBox cb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label); cb=v.findViewById(R.id.check);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app_check,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=all.get(pos); String pkg=ri.activityInfo.packageName; String lbl=labelCache.getOrDefault(pkg, ri.loadLabel(getPackageManager()).toString()); h.lb.setText(lbl); Drawable d=iconCache.get(pkg); if(d!=null) h.ic.setImageDrawable(d); h.cb.setOnCheckedChangeListener(null); h.cb.setChecked(selected.contains(pkg)); h.cb.setOnCheckedChangeListener((bb,is)->{ if(is) selected.add(pkg); else selected.remove(pkg); }); h.itemView.setOnClickListener(v->{ if(selected.contains(pkg)) selected.remove(pkg); else selected.add(pkg); h.cb.setChecked(selected.contains(pkg)); }); } public int getItemCount(){ return all.size(); } }; rv.setAdapter(adapter); dlg.findViewById(R.id.bCancel).setOnClickListener(v->dlg.dismiss()); dlg.findViewById(R.id.bCreate).setOnClickListener(v->{ String n=nameEd.getText().toString().trim(); if(n.isEmpty()) n="Dossier"; if(selected.isEmpty()){ Toast.makeText(this,"Coche au moins 1 app",0).show(); return; } folders.add(new Folder(n,new ArrayList<>(selected))); saveFolders(); folderAd.notifyDataSetChanged(); dlg.dismiss(); }); dlg.show(); }
