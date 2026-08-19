@@ -1,6 +1,8 @@
 package com.v7.quantumfast;
 import android.app.AppOpsManager; import android.app.Activity; import android.app.ActivityManager; import android.app.admin.DevicePolicyManager; import android.app.usage.StorageStats; import android.app.usage.StorageStatsManager; import android.content.*; import android.content.pm.*; import android.graphics.*; import android.graphics.drawable.Drawable; import android.net.Uri; import android.os.*; import android.os.storage.StorageManager; import android.provider.Settings; import android.view.*; import android.view.inputmethod.EditorInfo; import android.widget.*; import androidx.core.app.ActivityCompat; import androidx.core.content.ContextCompat; import androidx.recyclerview.widget.*; import java.io.*; import java.util.*; import java.util.concurrent.*; import java.text.SimpleDateFormat;
 public class MainActivity extends Activity {
+    android.content.BroadcastReceiver timeReceiver;
+
  EditText searchApps; EditText searchWeb;
     ImageView wallpaperView; ExecutorService exec = Executors.newSingleThreadExecutor(); Handler main = new Handler(Looper.getMainLooper());
     List<ResolveInfo> cache = Collections.synchronizedList(new ArrayList<>()); Map<String,Drawable> iconCache = new ConcurrentHashMap<>(); Map<String,String> labelCache = new ConcurrentHashMap<>(); Map<String,Long> usageMap = new HashMap<>(); long lastClick=0;
@@ -162,7 +164,7 @@ void clearSearchNow(){
 
 
 void registerTimeTick(){
- try{ if(timeReceiver!=null) unregisterReceiver(timeReceiver); }catch(Exception e){}
+    try{ }catch(Exception e){}
  timeReceiver = new android.content.BroadcastReceiver(){
   public void onReceive(android.content.Context c, android.content.Intent i){
    try{ updateClock(); }catch(Exception e){}
