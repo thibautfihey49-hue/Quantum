@@ -124,8 +124,7 @@ private java.util.List<String> lowRamDefaultPkgs(){
 private void ensureLowRamDefaults(){
  try{
   if(folders==null || folders.isEmpty()){
-   Folder f=new Folder("Tout Low-RAM");
-   f.pkgs.addAll(lowRamDefaultPkgs());
+   Folder f=new Folder("Tout Low-RAM", lowRamDefaultPkgs());
    folders.add(f);
    saveFolders();
   }
