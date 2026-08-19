@@ -207,16 +207,7 @@ void registerBatteryReceiver(){
     int level = i.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
     int scale = i.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1);
     int pct = level>=0 && scale>0 ? (level*100)/scale : 100;
-    android.widget.TextView tv=findViewById(R.id.battery);
-    if(tv==null) tv=findViewById(R.id.clock); // fallback si tu as tout dans la même view
-    if(tv!=null){
-     String txt = tv.getText().toString();
-     // garde MFR + date, change juste le %
-     if(txt.contains("%")) txt = txt.replaceAll("\\d+%",""+pct+"%");
-     else txt = txt+" "+pct+"%";
-     // tu peux aussi juste appeler updateClock() qui refait tout
-     updateClock();
-    }
+    updateClock();
    }catch(Exception e){}
   }
  };
