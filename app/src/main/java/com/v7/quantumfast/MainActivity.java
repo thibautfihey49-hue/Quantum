@@ -113,6 +113,37 @@ public class MainActivity extends Activity {
     void clock(){ TextView c=findViewById(R.id.clock); TextView d=findViewById(R.id.date); SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE); SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE); Runnable r=new Runnable(){public void run(){ try{ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); }catch(Exception e){} main.postDelayed(this,30000);} }; r.run(); }
     void preloadFast(){ exec.execute(()->{ try{ PackageManager pm=getPackageManager(); Intent ii=new Intent(Intent.ACTION_MAIN,null); ii.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> l=pm.queryIntentActivities(ii,0); l.sort((a,bb)->{ try{ return a.loadLabel(pm).toString().compareToIgnoreCase(bb.loadLabel(pm).toString()); }catch(Exception e){ return 0; } }); synchronized(cache){ cache.clear(); cache.addAll(l); for(ResolveInfo ri:l){ try{ labelCache.put(ri.activityInfo.packageName, ri.loadLabel(pm).toString()); }catch(Exception e){} } } main.post(()->setupDock()); }catch(Exception e){}}); }
     void setupDock(){ int[] ids={R.id.dPhone,R.id.dMsg,R.id.dExtra,R.id.dDrawer,R.id.dCam,R.id.dChrome}; for(int i=0;i<ids.length;i++){ final int idx=i; View vv=findViewById(ids[i]); if(vv==null) continue; ImageView iv= vv instanceof ImageView? (ImageView)vv : (ImageView)((FrameLayout)vv).getChildAt(0); if(idx==3) continue; String pkg=findRealPkg(prefs.getString(dockKeys[idx], defaultPkgs[idx])); if(pkg!=null) updateDockIcon(iv, pkg); vv.setOnClickListener(view->{ if(idx==3) openDrawerWithQuery(""); else { String rp=findRealPkg(prefs.getString(dockKeys[idx], defaultPkgs[idx])); if(rp!=null) launch(rp); }}); vv.setOnLongClickListener(view->{ if(idx==3) return false; pickDockApp(idx); return true; }); } findViewById(R.id.dDrawer).setOnClickListener(v->openDrawerWithQuery("")); }
+
+ void pickDockApp(int dockIdx){
+        android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen);
+        dlg.setContentView(R.layout.picker_dock);
+        androidx.recyclerview.widget.RecyclerView rv=dlg.findViewById(R.id.recyclerDock);
+        rv.setHasFixedSize(true);
+        rv.setItemAnimator(null);
+        rv.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this,5));
+        java.util.List<android.content.pm.ResolveInfo> list;
+        synchronized(cache){ list=new java.util.ArrayList<>(cache); }
+        rv.setAdapter(new androidx.recyclerview.widget.RecyclerView.Adapter(){
+            class H extends androidx.recyclerview.widget.RecyclerView.ViewHolder{ android.widget.ImageView ic; android.widget.TextView lb; H(android.view.View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
+            public androidx.recyclerview.widget.RecyclerView.ViewHolder onCreateViewHolder(android.view.ViewGroup parent,int viewType){ return new H(getLayoutInflater().inflate(R.layout.item_app,parent,false)); }
+            public void onBindViewHolder(androidx.recyclerview.widget.RecyclerView.ViewHolder hh,int pos){
+                try{
+                    H h=(H)hh; if(pos>=list.size()) return;
+                    android.content.pm.ResolveInfo ri=list.get(pos);
+                    String lbl=labelCache.get(ri.activityInfo.packageName); if(lbl!=null) h.lb.setText(lbl);
+                    android.graphics.drawable.Drawable d=iconCache.get(ri.activityInfo.packageName);
+                    if(d!=null) h.ic.setImageDrawable(d);
+                    else {
+                        h.ic.setImageResource(android.R.drawable.sym_def_app_icon);
+                        exec.execute(()->{ try{ android.graphics.drawable.Drawable dd=getPackageManager().getApplicationIcon(ri.activityInfo.packageName); iconCache.put(ri.activityInfo.packageName, dd); main.post(()->{ if(h.getBindingAdapterPosition()==pos) h.ic.setImageDrawable(dd); }); }catch(Exception e){} });
+                    }
+                    h.itemView.setOnClickListener(v->{ prefs.edit().putString(dockKeys[dockIdx], ri.activityInfo.packageName).apply(); dlg.dismiss(); setupDock(); });
+                }catch(Exception e){}
+            }
+            public int getItemCount(){ return list.size(); }
+        });
+        dlg.show();
+    }
     String findRealPkg(String pkg){ if(pkg==null||pkg.isEmpty()) return null; try{ getPackageManager().getPackageInfo(pkg,0); return pkg;}catch(Exception e){} return null; }
  void updateDockIcon(ImageView iv, String pkg){
         try{
