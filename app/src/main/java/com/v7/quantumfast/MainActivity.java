@@ -135,22 +135,26 @@ private void ensureLowRamDefaults(){
 
 
 
+
+
 void clearSearchNow(){
  try{
+  if(searchApps!=null){ searchApps.setText(""); searchApps.clearFocus(); }
+  if(searchWeb!=null){ searchWeb.setText(""); searchWeb.clearFocus(); }
   android.widget.EditText a = findViewById(R.id.searchAppsMain);
   if(a!=null){ a.setText(""); a.clearFocus(); }
-  if(searchApps!=null){ searchApps.setText(""); searchApps.clearFocus(); }
-  android.widget.EditText b = findViewById(R.id.search);
-  if(b!=null){ b.setText(""); b.clearFocus(); }
+  android.widget.EditText w = findViewById(R.id.searchWebMain);
+  if(w!=null){ w.setText(""); w.clearFocus(); }
+  android.widget.EditText d = findViewById(R.id.search);
+  if(d!=null){ d.setText(""); d.clearFocus(); }
  }catch(Exception e){}
  try{
   android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager)getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
   if(imm!=null){
    if(searchApps!=null) imm.hideSoftInputFromWindow(searchApps.getWindowToken(),0);
+   if(searchWeb!=null) imm.hideSoftInputFromWindow(searchWeb.getWindowToken(),0);
    android.view.View cf = getCurrentFocus();
    if(cf!=null) imm.hideSoftInputFromWindow(cf.getWindowToken(),0);
-   android.widget.EditText a = findViewById(R.id.searchAppsMain);
-   if(a!=null) imm.hideSoftInputFromWindow(a.getWindowToken(),0);
   }
  }catch(Exception e){}
 }
