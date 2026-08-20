@@ -37,50 +37,65 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         setContentView(R.layout.activity_main);
 
-        // SEARCH 20dp exact sous 01:10
         final View _rootView = findViewById(android.R.id.content);
-        _rootView.post(new Runnable(){ public void run(){
+        _rootView.postDelayed(new Runnable(){ public void run(){
             try{
                 TextView clockTv = null;
-                View searchContainer = null;
+                View searchEdit = null;
                 java.util.ArrayDeque<View> q = new java.util.ArrayDeque<>();
                 q.add(_rootView);
                 while(!q.isEmpty()){
                     View v = q.poll();
                     if(v instanceof TextView){
                         TextView tv = (TextView)v;
-                        CharSequence txt = tv.getText();
-                        if(txt!=null && txt.toString().contains(":")){
-                            if(clockTv==null || tv.getTextSize() > clockTv.getTextSize()) clockTv = tv;
+                        String s = tv.getText()!=null ? tv.getText().toString() : "";
+                        if(s.contains(":") && s.length()<=5){
+                            if(clockTv==null || tv.getTextSize()>clockTv.getTextSize()) clockTv = tv;
                         }
-                        if(txt!=null && txt.toString().toLowerCase().contains("rechercher")){
-                            ViewParent pp = v.getParent();
-                            if(pp instanceof ViewGroup){
-                                ViewParent gpp = ((ViewGroup)pp).getParent();
-                                searchContainer = (gpp instanceof ViewGroup) ? (View)gpp : (View)pp;
-                            }
+                        if(s.toLowerCase().contains("rechercher")) searchEdit = tv;
+                        if(v.getId()!=-1){
+                            String rid = getResources().getResourceEntryName(v.getId());
+                            if(rid!=null && rid.toLowerCase().contains("search") && v instanceof android.widget.EditText) searchEdit = v;
                         }
+                    }
+                    if(v instanceof android.widget.EditText){
+                        String h = ((android.widget.EditText)v).getHint()!=null ? ((android.widget.EditText)v).getHint().toString().toLowerCase() : "";
+                        if(h.contains("rechercher")) searchEdit = v;
                     }
                     if(v instanceof ViewGroup){
                         ViewGroup vg = (ViewGroup)v;
                         for(int i=0;i<vg.getChildCount();i++) q.add(vg.getChildAt(i));
                     }
                 }
-                if(clockTv!=null && searchContainer!=null){
+                if(clockTv!=null && searchEdit!=null){
+                    // remonte jusqu'au conteneur direct sous content
+                    View cur = searchEdit;
+                    View container = cur;
+                    while(cur!=null){
+                        ViewParent p = cur.getParent();
+                        if(p==_rootView || (p instanceof ViewGroup && ((ViewGroup)p).getId()==android.R.id.content)){
+                            container = cur;
+                            break;
+                        }
+                        if(p instanceof View) { container = (View)p; cur = (View)p; }
+                        else break;
+                    }
                     float dens = getResources().getDisplayMetrics().density;
                     float targetY = clockTv.getY() + clockTv.getHeight() + 20*dens;
-                    searchContainer.setY(targetY);
-                    searchContainer.setTranslationY(0);
-                    ViewGroup.LayoutParams lp = searchContainer.getLayoutParams();
+                    container.setY(targetY);
+                    container.setTranslationY(0);
+                    container.setTranslationX(0);
+                    ViewGroup.LayoutParams lp = container.getLayoutParams();
                     if(lp instanceof ViewGroup.MarginLayoutParams){
-                        ((ViewGroup.MarginLayoutParams)lp).bottomMargin = 0;
                         ((ViewGroup.MarginLayoutParams)lp).topMargin = 0;
+                        ((ViewGroup.MarginLayoutParams)lp).bottomMargin = 0;
                     }
-                    searchContainer.setLayoutParams(lp);
-                    searchContainer.bringToFront();
+                    container.setLayoutParams(lp);
+                    container.bringToFront();
+                    container.invalidate();
                 }
-            }catch(Exception e){}
-        }});
+            }catch(Exception e){ android.util.Log.e("QUANTUM", "move fail", e); }
+        }}, 200);
 
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
