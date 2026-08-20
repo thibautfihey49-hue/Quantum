@@ -7,12 +7,12 @@ import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.*;
-import androidx.appcompat.app.AppCompatActivity;
+
 import androidx.recyclerview.widget.RecyclerView;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends android.app.Activity {
     View mainRoot;
     RecyclerView rvSugg, rvFav, rvFolders;
     EditText searchApps, searchWeb;
@@ -33,10 +33,11 @@ public class MainActivity extends AppCompatActivity {
         searchWeb=findViewById(R.id.searchWebMain);
         View clear=findViewById(R.id.clearApps);
         if(clear!=null) clear.setOnClickListener(v->searchApps.setText(""));
-        findViewById(R.id.btnWebGo).setOnClickListener(v->{ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooserGlass(q); });
-        findViewById(R.id.btnAddFav).setOnClickListener(v->showAddFavDialog());
-        findViewById(R.id.btnAddFolder).setOnClickListener(v->showCreateFolderDialog());
-        findViewById(R.id.btnMenu).setOnClickListener(v->showGlassMenu());
+        
+View _go=findViewById(R.id.btnWebGo); if(_go==null) _go=findViewById(R.id.go); if(_go!=null) _go.setOnClickListener(v->{ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooserGlass(q); });
+        View _fav=findViewById(R.id.btnAddFav); if(_fav==null) _fav=findViewById(R.id.Fav); if(_fav!=null) _fav.setOnClickListener(v->showAddFavDialog());
+        View _fold=findViewById(R.id.btnAddFolder); if(_fold==null) _fold=findViewById(R.id.Folder); if(_fold!=null) _fold.setOnClickListener(v->showCreateFolderDialog());
+        View _menu=findViewById(R.id.btnMenu); if(_menu==null) _menu=findViewById(R.id.Menu); if(_menu!=null) _menu.setOnClickListener(v->showGlassMenu());
         setupAtAGlanceSimple();
         setupDock();
         loadUsage();
