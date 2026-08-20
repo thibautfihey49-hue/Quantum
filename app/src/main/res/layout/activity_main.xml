@@ -70,7 +70,7 @@
                 android:background="@android:color/transparent"
                 android:padding="16dp"
                 android:textColor="#FFFFFF"
-                android:hintTextColor="#88FFFFFF"
+                android:textColorHint="#88FFFFFF"
                 android:singleLine="true" />
 
             <ImageView
@@ -97,7 +97,7 @@
                 android:background="@android:color/transparent"
                 android:padding="16dp"
                 android:textColor="#FFFFFF"
-                android:hintTextColor="#88FFFFFF"
+                android:textColorHint="#88FFFFFF"
                 android:singleLine="true" />
 
             <TextView
