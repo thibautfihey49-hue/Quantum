@@ -3,18 +3,14 @@ import android.app.AlertDialog;
 import android.content.*;
 import android.content.pm.*;
 import android.graphics.*;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.*;
-
-import androidx.recyclerview.widget.RecyclerView;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class MainActivity extends android.app.Activity {
     View mainRoot;
-    RecyclerView rvSugg, rvFav, rvFolders;
     EditText searchApps, searchWeb;
     SharedPreferences prefs, glassPrefs;
     String[] dockKeys={"dock_phone","dock_msg","dock_extra","dock_drawer","dock_cam","dock_chrome"};
@@ -26,23 +22,25 @@ public class MainActivity extends android.app.Activity {
         prefs=getSharedPreferences("dock",0);
         glassPrefs=getSharedPreferences("glass",0);
         mainRoot=findViewById(R.id.root);
-        rvSugg=findViewById(R.id.rvSuggestions);
-        rvFav=findViewById(R.id.rvFavorites);
-        rvFolders=findViewById(R.id.rvFolders);
         searchApps=findViewById(R.id.searchAppsMain);
         searchWeb=findViewById(R.id.searchWebMain);
-        View clear=findViewById(R.id.clearApps);
-        if(clear!=null) clear.setOnClickListener(v->searchApps.setText(""));
-        
-View _go=findViewById(R.id.btnWebGo); if(_go==null) _go=findViewById(R.id.go); if(_go!=null) _go.setOnClickListener(v->{ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooserGlass(q); });
-        View _fav=findViewById(R.id.btnAddFav); if(_fav==null) _fav=findViewById(R.id.Fav); if(_fav!=null) _fav.setOnClickListener(v->showAddFavDialog());
-        View _fold=findViewById(R.id.btnAddFolder); if(_fold==null) _fold=findViewById(R.id.Folder); if(_fold!=null) _fold.setOnClickListener(v->showCreateFolderDialog());
-        View _menu=findViewById(R.id.btnMenu); if(_menu==null) _menu=findViewById(R.id.Menu); if(_menu!=null) _menu.setOnClickListener(v->showGlassMenu());
+        try{ View c=findViewById(R.id.clearApps); if(c!=null) c.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); }); }catch(Exception e){}
+        try{ View go=findViewById(R.id.btnWebGo); if(go==null) go=findView(R.id.class,"btnWebGo","go","web_go"); if(go!=null) go.setOnClickListener(v->{ if(searchWeb!=null){ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooserGlass(q); }}); }catch(Exception e){}
+        try{ View fav=findView(R.id.class,"btnAddFav","Fav","fav"); if(fav!=null) fav.setOnClickListener(v->showAddFavDialog()); }catch(Exception e){}
+        try{ View fol=findView(R.id.class,"btnAddFolder","Folder","folder"); if(fol!=null) fol.setOnClickListener(v->showCreateFolderDialog()); }catch(Exception e){}
+        try{ View men=findView(R.id.class,"btnMenu","Menu","menu"); if(men!=null) men.setOnClickListener(v->showGlassMenu()); }catch(Exception e){}
         setupAtAGlanceSimple();
         setupDock();
-        loadUsage();
         int savedCol=glassPrefs.getInt("glass_color",0);
         if(savedCol!=0) applyGlassTheme(savedCol);
+    }
+
+    View findView(Class<?> r,String...names){
+        for(String n:names){
+            int id=getResources().getIdentifier(n,"id",getPackageName());
+            if(id!=0){ View v=findViewById(id); if(v!=null) return v; }
+        }
+        return null;
     }
 
     void setupAtAGlanceSimple(){
@@ -60,7 +58,7 @@ View _go=findViewById(R.id.btnWebGo); if(_go==null) _go=findViewById(R.id.go); i
         SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE);
         SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE);
         Runnable r=new Runnable(){public void run(){
-            try{ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); }catch(Exception e){}
+            try{ if(c!=null) c.setText(tf.format(new java.util.Date())); if(d!=null) d.setText(df.format(new java.util.Date()).toUpperCase()+" • Paris"); }catch(Exception e){}
             if(mainRoot!=null) mainRoot.postDelayed(this,30000);
         }};
         r.run();
@@ -74,28 +72,18 @@ View _go=findViewById(R.id.btnWebGo); if(_go==null) _go=findViewById(R.id.go); i
             if(vv==null) continue;
             ImageView iv= vv instanceof ImageView? (ImageView)vv : (ImageView)((android.widget.FrameLayout)vv).getChildAt(0);
             String saved=prefs.getString(dockKeys[idx], defaultPkgs[idx]);
-            String pkg=findRealPkg(saved);
-            if(pkg==null) pkg=saved;
-            updateDockIcon(iv,pkg,saved);
+            String pkg=findRealPkg(saved); if(pkg==null) pkg=saved;
+            updateDockIcon(iv,pkg);
             if(idx==3){ vv.setOnClickListener(v->openDrawerWithQuery("")); }
             else { vv.setOnClickListener(v->{ String rs=prefs.getString(dockKeys[idx], defaultPkgs[idx]); String rp=findRealPkg(rs); if(rp==null) rp=rs; launch(rp); }); }
             vv.setOnLongClickListener(v->{ pickDockApp(idx); return true; });
         }
     }
 
-    String findRealPkg(String pkg){
-        if(pkg==null) return null;
-        try{ getPackageManager().getPackageInfo(pkg,0); return pkg; }catch(Exception e){ return pkg; }
-    }
-
-    void updateDockIcon(ImageView iv, String pkg, String name){
-        try{ Drawable d=getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager()); iv.setImageDrawable(d); }catch(Exception e){
-            iv.setImageResource(android.R.drawable.sym_def_app_icon);
-        }
-    }
-
+    String findRealPkg(String pkg){ try{ getPackageManager().getPackageInfo(pkg,0); return pkg; }catch(Exception e){ return pkg; } }
+    void updateDockIcon(ImageView iv, String pkg){ try{ iv.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); }catch(Exception e){ iv.setImageResource(android.R.drawable.sym_def_app_icon); } }
     void launch(String pkg){ try{ Intent it=getPackageManager().getLaunchIntentForPackage(pkg); if(it!=null){ it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(it);} }catch(Exception e){} }
-    void openDrawerWithQuery(String q){ searchApps.setText(q); }
+    void openDrawerWithQuery(String q){ if(searchApps!=null) searchApps.setText(q); }
     void pickDockApp(int idx){
         Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER);
         List<ResolveInfo> apps=getPackageManager().queryIntentActivities(it,0);
@@ -103,9 +91,8 @@ View _go=findViewById(R.id.btnWebGo); if(_go==null) _go=findViewById(R.id.go); i
         for(int i=0;i<apps.size();i++){ names[i]=apps.get(i).loadLabel(getPackageManager()).toString(); pkgs[i]=apps.get(i).activityInfo.packageName; }
         new AlertDialog.Builder(this).setTitle("Choisir app dock").setItems(names,(d,w)->{ prefs.edit().putString(dockKeys[idx],pkgs[w]).apply(); setupDock(); }).show();
     }
-    void showAddFavDialog(){ Toast.makeText(this,"Fav ajouté",Toast.LENGTH_SHORT).show(); }
-    void showCreateFolderDialog(){ Toast.makeText(this,"Folder créé",Toast.LENGTH_SHORT).show(); }
-
+    void showAddFavDialog(){ Toast.makeText(this,"Fav",Toast.LENGTH_SHORT).show(); }
+    void showCreateFolderDialog(){ Toast.makeText(this,"Folder",Toast.LENGTH_SHORT).show(); }
     void showGlassMenu(){ showPaletteDialog(); }
 
     void showPaletteDialog(){
@@ -139,8 +126,8 @@ View _go=findViewById(R.id.btnWebGo); if(_go==null) _go=findViewById(R.id.go); i
         b.setView(sv);
         b.setPositiveButton("HEX custom",(d,w)->{
             EditText et=new EditText(this); et.setHint("#FFD4E7");
-            new AlertDialog.Builder(this).setTitle("Couleur HEX").setView(et)
-          .setPositiveButton("OK",(dd,ww)->{ try{ int c=Color.parseColor(et.getText().toString().trim()); glassPrefs.edit().putInt("glass_color",c).apply(); applyGlassTheme(c);}catch(Exception e){ Toast.makeText(this,"HEX invalide",Toast.LENGTH_SHORT).show(); } }).show();
+            new AlertDialog.Builder(this).setTitle("HEX").setView(et)
+         .setPositiveButton("OK",(dd,ww)->{ try{ int c=Color.parseColor(et.getText().toString().trim()); glassPrefs.edit().putInt("glass_color",c).apply(); applyGlassTheme(c);}catch(Exception e){ Toast.makeText(this,"HEX invalide",0).show(); } }).show();
         });
         b.setNegativeButton("Fermer",null); b.show();
     }
@@ -151,7 +138,5 @@ View _go=findViewById(R.id.btnWebGo); if(_go==null) _go=findViewById(R.id.go); i
             for(int id:bars){ View v=findViewById(id); if(v!=null && v.getBackground()!=null){ v.getBackground().setColorFilter(col, PorterDuff.Mode.SRC_ATOP); v.setAlpha(0.9f); } }
         }catch(Exception e){}
     }
-
-    void showBrowserChooserGlass(String q){ Toast.makeText(this,"Web: "+q,Toast.LENGTH_SHORT).show(); }
-    void loadUsage(){}
+    void showBrowserChooserGlass(String q){ Toast.makeText(this,q,Toast.LENGTH_SHORT).show(); }
 }
