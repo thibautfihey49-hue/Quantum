@@ -1,0 +1,5 @@
+-keep class com.v7.quantumfast.QuantumApp { *; }
+-keep class com.v7.quantumfast.MainActivity { *; }
+-optimizations !code/simplification/arithmetic,!field/*,!class/merging/*
+-optimizationpasses 10
+-allowaccessmodification

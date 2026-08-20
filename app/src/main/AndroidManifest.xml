@@ -1,16 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.SET_WALLPAPER"/><uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/><uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/><uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission"/><uses-permission android:name="android.permission.GET_ACCOUNTS"/><uses-permission android:name="android.permission.READ_CONTACTS"/><uses-permission android:name="android.permission.READ_CALENDAR"/><uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/><uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/><uses-permission android:name="android.permission.POST_NOTIFICATIONS"/><uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/><uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES"/><uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions"/>
-    
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent>
-    </queries>
-    <application android:allowBackup="true" android:icon="@drawable/ic_launcher" android:label="Quantum" android:theme="@android:style/Theme.NoTitleBar.Fullscreen" android:requestLegacyExternalStorage="true" android:hardwareAccelerated="true" android:largeHeap="true">
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:screenOrientation="portrait" android:windowSoftInputMode="adjustPan" android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|smallestScreenSize"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.HOME"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
-        <receiver android:name=".MainActivity$AdminReceiver" android:permission="android.permission.BIND_DEVICE_ADMIN" android:exported="false"><meta-data android:name="android.app.device_admin" android:resource="@xml/device_admin"/><intent-filter><action android:name="android.app.action.DEVICE_ADMIN_ENABLED"/></intent-filter></receiver>
-        <service android:name=".CacheCleanerService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="true"><intent-filter><action android:name="android.accessibilityservice.AccessibilityService"/></intent-filter><meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_service"/></service>
-    </application>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<application android:name=".QuantumApp" android:largeHeap="true" android:hardwareAccelerated="true" android:allowBackup="false" android:icon="@mipmap/ic_launcher" android:label="Quantum">
+<activity android:name=".MainActivity" android:launchMode="singleTask" android:configChanges="orientation|screenSize|keyboard|keyboardHidden|mcc|mnc|locale|layoutDirection|fontScale|uiMode|navigation|smallestScreenSize|screenLayout" android:windowSoftInputMode="stateAlwaysHidden|adjustNothing" android:exported="true" android:theme="@android:style/Theme.NoTitleBar">
+<intent-filter android:priority="1000"><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.HOME"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+</activity>
+</application>
 </manifest>

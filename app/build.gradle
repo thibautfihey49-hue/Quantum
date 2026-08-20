@@ -1,12 +1,26 @@
 plugins { id 'com.android.application' }
 android {
+ namespace 'com.v7.quantumfast'
  compileSdk 34
- defaultConfig { applicationId "com.v7.quantumfast"; minSdk 21; targetSdk 34; versionCode 999999; versionName "RESTORE_UI_INFINITE" }
+ defaultConfig {
+  applicationId "com.v7.quantumfast"
+  minSdk 21
+  targetSdk 34
+  versionCode 999999
+  versionName "RESTORE_UI_INFINITE"
+ }
  buildTypes {
-  release { minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
-  debug { minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
+  release {
+   minifyEnabled true
+   shrinkResources true
+   proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+  }
+  debug {
+   minifyEnabled true
+   shrinkResources true
+   proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+  }
  }
  compileOptions { sourceCompatibility 17; targetCompatibility 17 }
- dexOptions { javaMaxHeapSize "8g"; preDexLibraries true; maxProcessCount 32 }
 }
 dependencies {}
