@@ -16,13 +16,13 @@ public class MainActivity extends Activity {
     SharedPreferences prefs;
     String[] dockKeys = {"dock_phone","dock_msg","dock_extra","dock_drawer","dock_cam","dock_chrome"};
     String[] defaultPkgs = {"com.android.dialer","com.google.android.apps.messaging","com.android.settings","com.v7.quantumfast","com.android.camera2","com.android.chrome"};
-    LinearLayout main;
+    android.view.View main;
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
         setContentView(R.layout.activity_main);
         prefs=getSharedPreferences("dock",0);
-        main=findViewById(R.id.root);
+        main=findViewById(R.id.root); // FrameLayout OK
         rvSugg=findViewById(R.id.rvSuggestions);
         rvFav=findViewById(R.id.rvFavorites);
         rvFolders=findViewById(R.id.rvFolders);
