@@ -55,7 +55,6 @@ protected void onCreate(Bundle b){
         findViewById(R.id.btnWebGo).setOnClickListener(v->{ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooserGlass(q); });
         findViewById(R.id.btnAddFav).setOnClickListener(v->showAddFavDialog());
         findViewById(R.id.btnAddFolder).setOnClickListener(v->showCreateFolderDialog());
-        findViewById(R.id.btnBooster).setOnClickListener(v->showRealBoosterDialog());
         main.postDelayed(()->{ if(!isDefaultLauncher()) showGlassDialog(); }, 800);
         findViewById(R.id.btnMenu).setOnClickListener(v->showGlassMenu());
     }
@@ -66,7 +65,6 @@ protected void onCreate(Bundle b){
     void loadUsage(){ Map<String,?> all=prefs.getAll(); for(Map.Entry<String,?> e:all.entrySet()) if(e.getKey().startsWith("use_")&& e.getValue() instanceof Long) usageMap.put(e.getKey().substring(4),(Long)e.getValue()); }
     void trackUsage(String pkg){ long now=System.currentTimeMillis(); usageMap.put(pkg,now); prefs.edit().putLong("use_"+pkg,now).apply(); }
     void requestAllPerms(){ List<String> need=new ArrayList<>(); String[] all={android.Manifest.permission.READ_MEDIA_IMAGES, android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS}; for(String p:all){ if(ContextCompat.checkSelfPermission(this,p)!=PackageManager.PERMISSION_GRANTED) need.add(p); } if(!need.isEmpty()) ActivityCompat.requestPermissions(this, need.toArray(new String[0]), 999); }
-    void showRealBoosterDialog(){
         android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_booster);
         TextView status=dlg.findViewById(R.id.boosterStatus); TextView ramText=dlg.findViewById(R.id.ramText); TextView cacheText=dlg.findViewById(R.id.cacheText); TextView cacheCount=dlg.findViewById(R.id.cacheCount); TextView junkText=dlg.findViewById(R.id.junkText); TextView junkList=dlg.findViewById(R.id.junkList);
         TextView bUsage=dlg.findViewById(R.id.bGrantUsage); TextView bAccess=dlg.findViewById(R.id.bGrantAccess);
@@ -97,7 +95,6 @@ protected void onCreate(Bundle b){
             Toast.makeText(this,"Nettoyage auto lancé",1).show();
             exec.execute(()->{ for(String pkg:bigCachePkgs){ try{ Intent intent=new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS); intent.setData(Uri.parse("package:"+pkg)); intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); CacheCleanerService.isCleaning=true; main.post(()->startActivity(intent)); Thread.sleep(3500); }catch(Exception e){} } main.post(()->Toast.makeText(this,"Terminé ✅",1).show()); });
         });
-        dlg.findViewById(R.id.bCloseBooster).setOnClickListener(v->dlg.dismiss());
         dlg.show();
     }
     boolean hasUsageAccess(){ try{ ApplicationInfo ai=getPackageManager().getApplicationInfo(getPackageName(),0); AppOpsManager appOps=(AppOpsManager)getSystemService(Context.APP_OPS_SERVICE); int mode=appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, ai.uid, ai.packageName); return mode==AppOpsManager.MODE_ALLOWED; }catch(Exception e){ return false; } }
@@ -219,7 +216,7 @@ android.graphics.drawable.Drawable getCachedIcon(String pkg, android.content.pm.
  try{
   android.graphics.drawable.Drawable d = iconCache.get(pkg);
   if(d!=null) return d;
-  d = pm.getApplicationIcon(pkg);
+  d = pm."" // HUNTR/X themed;
   if(d!=null) iconCache.put(pkg,d);
   return d;
  }catch(Exception e){ return null; }
@@ -276,12 +273,12 @@ void saveFolders(){ StringBuilder sb=new StringBuilder(); for(int i=0;i<folders.
             if(cd!=null){ iv.setImageDrawable(cd); return; }
             android.graphics.Bitmap disk=DiskIconCache.get(this,pkg);
             if(disk!=null){ iv.setImageBitmap(android.graphics.Bitmap.createScaledBitmap(disk,96,96,true)); return; }
-            android.graphics.drawable.Drawable d=getPackageManager().getApplicationIcon(pkg);
+            android.graphics.drawable.Drawable d=getPackageManager()."" // HUNTR/X themed;
             android.graphics.Bitmap bmp;
             if(d instanceof android.graphics.drawable.BitmapDrawable){ bmp=((android.graphics.drawable.BitmapDrawable)d).getBitmap(); }
             else { bmp=android.graphics.Bitmap.createBitmap(96,96, android.graphics.Bitmap.Config.RGB_565); android.graphics.Canvas c=new android.graphics.Canvas(bmp); d.setBounds(0,0,96,96); d.draw(c); }
             DiskIconCache.put(this,pkg,bmp);
-            iv.setImageDrawable(d);
+            iv.setImageDrawable(HuntrxIconHelper.getThemedIcon(this, pkg, pkg));
             if(iconCache.size()<5) iconCache.put(pkg,d);
         }catch(Exception e){ try{ iv.setImageResource(android.R.drawable.sym_def_app_icon); }catch(Exception ee){} }
     }

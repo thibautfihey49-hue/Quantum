@@ -43,7 +43,6 @@
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="12dp" android:gravity="center">
             <TextView android:id="@+id/btnAddFav" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fav" android:padding="12dp"/>
             <TextView android:id="@+id/btnAddFolder" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Folder" android:padding="12dp"/>
-            <TextView android:id="@+id/btnBooster" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Boost" android:padding="12dp"/>
             <TextView android:id="@+id/btnMenu" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Menu" android:padding="12dp"/>
         </LinearLayout>
 
