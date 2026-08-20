@@ -135,7 +135,7 @@ public class MainActivity extends Activity {
         pool.execute(()->{
             try{
                 Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER);
-                List<ResolveInfo> all=getPackageManager().queryIntentActivities(it, PackageManager.MATCH_DEFAULT_ONLY);
+                List<ResolveInfo> all=getPackageManager().queryIntentActivities(it, 0);
                 Collections.sort(all,(a,b)->a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString()));
                 allAppsCache=all;
                 for(ResolveInfo ri:all){ try{ String pkg=ri.activityInfo.packageName; if(iconCache.get(pkg)==null) iconCache.put(pkg, ri.loadIcon(getPackageManager())); }catch(Exception e){} }
