@@ -30,47 +30,35 @@ public class MainActivity extends Activity {
     Handler mainH=new Handler(Looper.getMainLooper());
     String[] dockKeys={"dock_phone","dock_msg","dock_extra","dock_drawer","dock_cam","dock_chrome"};
     String[] defaultPkgs={"com.android.dialer","com.google.android.apps.messaging","com.android.settings","com.v7.quantumfast","com.android.camera2","com.android.chrome"};
-
     int getId(String n){ return getResources().getIdentifier(n,"id",getPackageName()); }
     View findV(String... names){ for(String s:names){ int id=getId(s); if(id!=0){ View v=findViewById(id); if(v!=null) return v; } } return null; }
+    int getNavBarH(){ int id=getResources().getIdentifier("navigation_bar_height","dimen","android"); return id>0?getResources().getDimensionPixelSize(id):0; }
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
         setContentView(R.layout.activity_main);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         prefs=getSharedPreferences("dock",0);
         glassPrefs=getSharedPreferences("glass",0);
         mainRoot=findViewById(R.id.root);
-        searchApps=(EditText)findV("searchAppsMain","searchApps","search_main");
-        searchWeb=(EditText)findV("searchWebMain","searchWeb","search_web");
-        rvSugg=(RecyclerView)findV("rvSuggestions","rvSugg","suggestions");
-        rvFav=(RecyclerView)findV("rvFavorites","rvFav","favs","favorites","gridFav","rvFavFavorites");
-
+        if(mainRoot!=null){ mainRoot.setPadding(0,0,0,getNavBarH()); }
+        searchApps=(EditText)findV("searchAppsMain","searchApps"); searchWeb=(EditText)findV("searchWebMain","searchWeb");
+        rvSugg=(RecyclerView)findV("rvSuggestions","rvSugg"); rvFav=(RecyclerView)findV("rvFavorites","rvFav","favs");
         if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setVisibility(View.GONE); rvSugg.setAdapter(new SuggAdapter()); }
-        if(rvFav!=null){ rvFav.setLayoutManager(new GridLayoutManager(this,5)); rvFav.setVisibility(View.VISIBLE); }
-
+        if(rvFav!=null){ rvFav.setLayoutManager(new GridLayoutManager(this,5)); rvFav.setVisibility(View.VISIBLE); rvFav.setPadding(0,0,0,20); }
         try{ for(String n:new String[]{"btnBoost","gCard","yCard","folderZone","rvFolders","btnAddFolder"}){ View v=findV(n); if(v!=null) v.setVisibility(View.GONE); } }catch(Exception e){}
-
-        View cl=findV("clearApps","btnClear","clear"); if(cl!=null) cl.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); });
+        View cl=findV("clearApps","btnClear"); if(cl!=null) cl.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); });
         View go=findV("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setOnClickListener(v->handleWeb());
-        View favBtn=findV("btnAddFav","Fav","fav","btnFav"); if(favBtn!=null) favBtn.setOnClickListener(v->showAddFavDialog());
-        View men=findV("btnMenu","Menu","menu","btnMenu"); if(men!=null) men.setOnClickListener(v->showMenuModern());
-
-        loadFavs();
-        if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
-
+        View favBtn=findV("btnAddFav","Fav","fav"); if(favBtn!=null) favBtn.setOnClickListener(v->showAddFavDialog());
+        View men=findV("btnMenu","Menu","menu"); if(men!=null) men.setOnClickListener(v->showMenuModern());
+        loadFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
         setupAtAGlance(); preloadMax(); setupDock();
         applyGlassTheme(glassPrefs.getInt("glass_color",0xFF6B4C8A));
-
         if(searchApps!=null) searchApps.addTextChangedListener(new android.text.TextWatcher(){
             public void beforeTextChanged(CharSequence s,int a,int b,int c){}
-            public void onTextChanged(CharSequence s,int a,int b,int c){
-                String q=s.toString(); boolean typing=!q.trim().isEmpty();
-                if(rvFav!=null) rvFav.setVisibility(typing?View.GONE:View.VISIBLE);
-                if(rvSugg!=null) rvSugg.setVisibility(typing?View.VISIBLE:View.GONE);
-                filterAppsInstant(q);
-            }
+            public void onTextChanged(CharSequence s,int a,int b,int c){ String q=s.toString(); boolean typing=!q.trim().isEmpty(); if(rvFav!=null) rvFav.setVisibility(typing?View.GONE:View.VISIBLE); if(rvSugg!=null) rvSugg.setVisibility(typing?View.VISIBLE:View.GONE); filterAppsInstant(q); }
             public void afterTextChanged(android.text.Editable s){}
         });
         checkAndAskPermissions();
@@ -118,17 +106,13 @@ public class MainActivity extends Activity {
             }catch(Exception e){}
         });
     }
-
     void filterAppsInstant(String q){
         try{
             suggList.clear();
             if(q==null||q.trim().isEmpty()){ if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter()); return;}
             String lq=q.toLowerCase().trim();
             List<ResolveInfo> src=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache;
-            for(ResolveInfo ri:src){
-                String label=ri.loadLabel(getPackageManager()).toString().toLowerCase();
-                if(label.contains(lq) || ri.activityInfo.packageName.toLowerCase().contains(lq)){ suggList.add(ri); if(suggList.size()>=80) break; }
-            }
+            for(ResolveInfo ri:src){ String label=ri.loadLabel(getPackageManager()).toString().toLowerCase(); if(label.contains(lq) || ri.activityInfo.packageName.toLowerCase().contains(lq)){ suggList.add(ri); if(suggList.size()>=80) break; } }
             if(rvSugg!=null){ rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.VISIBLE); }
         }catch(Exception e){}
     }
@@ -138,38 +122,46 @@ public class MainActivity extends Activity {
             List<ResolveInfo> tmp=allAppsCache;
             if(tmp.isEmpty()){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);} tmp=new ArrayList<>(map.values()); }
             final List<ResolveInfo> src=tmp;
-            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(12,12,12,12);
+            // FULL SCREEN DRAWER
+            Dialog dlg=new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+            dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
+            dlg.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
+            LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
+            TextView title=new TextView(this); title.setText("Tiroir - "+src.size()+" apps"); title.setTextSize(20); title.setTextColor(Color.WHITE); title.setPadding(40,60,40,30); title.setTypeface(null, Typeface.BOLD); root.addView(title);
+            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(12,12,12, getNavBarH()+20); rv.setClipToPadding(false);
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
-                public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(10); lb.setTextColor(Color.WHITE); } return new H(vv); }
-                public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=src.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(ri.activityInfo.packageName); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->{ launchInstant(ri.activityInfo.packageName); }); }
+                public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(2); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(10); lb.setTextColor(Color.WHITE); lb.setGravity(Gravity.CENTER); lb.setLines(2); } return new H(vv); }
+                public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=src.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(ri.activityInfo.packageName); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->{ launchInstant(ri.activityInfo.packageName); dlg.dismiss(); }); }
                 public int getItemCount(){ return src.size(); }
             });
-            AlertDialog dlg=createModernDialog("Tiroir - "+src.size()+" apps", rv); dlg.show();
+            root.addView(rv, new LinearLayout.LayoutParams(-1,-1));
+            dlg.setContentView(root);
+            dlg.show();
         }catch(Exception e){}
     }
 
     void loadWallpaperFast(){ try{ String s=prefs.getString("custom_wallpaper_uri",""); if(s.isEmpty()) return; Uri uri=Uri.parse(s); View bg=findV("wallpaper","bg","background","wall","wallpaperView"); if(bg instanceof ImageView){ ((ImageView)bg).setScaleType(ImageView.ScaleType.CENTER_CROP); ((ImageView)bg).setImageURI(uri); } }catch(Exception e){} }
     @Override protected void onActivityResult(int rc,int res,Intent data){ if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri u=data.getData(); try{ getContentResolver().takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri",u.toString()).apply(); loadWallpaperFast(); } }
-
     void setupAtAGlance(){ TextView c=(TextView)findV("clock","time","clockView"); TextView d=(TextView)findV("dateInfo","date","dateView"); SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE); SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE); Runnable r=new Runnable(){public void run(){ try{ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); }catch(Exception e){} if(mainRoot!=null) mainRoot.postDelayed(this,30000); }}; r.run(); }
-
     String resolveIntentPkg(Intent intent){ try{ List<ResolveInfo> r=getPackageManager().queryIntentActivities(intent,0); if(r!=null&&!r.isEmpty()) return r.get(0).activityInfo.packageName; }catch(Exception e){} return null; }
     String getSmartDefault(int idx){ try{ if(idx==0){ String p=resolveIntentPkg(new Intent(Intent.ACTION_DIAL)); if(p!=null) return p;} if(idx==1){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("sms:"))); if(p!=null) return p;} if(idx==2) return "com.android.settings"; if(idx==4){ String p=resolveIntentPkg(new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)); if(p!=null) return p;} if(idx==5){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("http://google.com"))); if(p!=null) return p;} }catch(Exception e){} return defaultPkgs[idx]; }
     void setupDock(){
         int[] ids={R.id.dPhone,R.id.dMsg,R.id.dExtra,R.id.dDrawer,R.id.dCam,R.id.dChrome};
+        int navH=getNavBarH();
         for(int i=0;i<ids.length;i++){ final int idx=i; View vv=findViewById(ids[i]); if(vv==null) continue; ImageView iv; if(vv instanceof ImageView) iv=(ImageView)vv; else{ try{ iv=(ImageView)((FrameLayout)vv).getChildAt(0);}catch(Exception e){ continue; } }
+            if(vv.getLayoutParams() instanceof ViewGroup.MarginLayoutParams){ ((ViewGroup.MarginLayoutParams)vv.getLayoutParams()).bottomMargin=navH/2; }
             if(idx==3){ iv.setImageResource(android.R.drawable.ic_menu_sort_by_size); iv.setBackgroundResource(android.R.color.transparent); vv.setOnClickListener(v->openFullDrawer()); continue; }
             String saved=prefs.getString(dockKeys[idx], null); if(saved==null) saved=getSmartDefault(idx); String pkg=findRealPkg(saved); if(pkg==null) pkg=getSmartDefault(idx); updateDockIcon(iv,pkg);
             vv.setOnClickListener(v->{ String rs=prefs.getString(dockKeys[idx], getSmartDefault(idx)); String rp=findRealPkg(rs); if(rp!=null) launchInstant(rp); });
             vv.setOnLongClickListener(v->{ pickDockApp(idx); return true; });
         }
+        View dock=findV("dock","dockBar","dock_container","dockContainer","bottomDock"); if(dock!=null){ if(dock.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) ((ViewGroup.MarginLayoutParams)dock.getLayoutParams()).bottomMargin=navH; }
     }
     String findRealPkg(String pkg){ if(pkg==null) return null; try{ getPackageManager().getPackageInfo(pkg,0); return pkg; }catch(Exception e){ return null; } }
     void updateDockIcon(ImageView iv, String pkg){ try{ Drawable c=iconCache.get(pkg); if(c!=null) iv.setImageDrawable(c); else iv.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); iv.setBackgroundColor(Color.TRANSPARENT);}catch(Exception e){ iv.setImageResource(android.R.drawable.sym_def_app_icon); } }
     void launchInstant(String pkg){ try{ Intent ii=getPackageManager().getLaunchIntentForPackage(pkg); if(ii!=null){ ii.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_NO_ANIMATION); clearSearchNow(); startActivity(ii); overridePendingTransition(0,0); } }catch(Exception e){} }
     void clearSearchNow(){ if(searchApps!=null) searchApps.setText(""); suggList.clear(); if(rvSugg!=null){ rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.GONE); } if(rvFav!=null) rvFav.setVisibility(View.VISIBLE); }
-
     void pickDockApp(int idx){
         List<ResolveInfo> apps=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache;
         LinkedHashMap<String, ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:apps){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName, ri); }
@@ -183,32 +175,33 @@ public class MainActivity extends Activity {
         });
         AlertDialog dlg=createModernDialog("Choisir app dock", rv); dlg.show();
     }
-
     void loadFavs(){ favPkgs.clear(); String s=prefs.getString("favs",""); if(!s.isEmpty()) favPkgs.addAll(Arrays.asList(s.split(","))); }
     void saveFavs(){ prefs.edit().putString("favs", String.join(",", favPkgs)).apply(); }
-
     void showAddFavDialog(){
         try{
             List<ResolveInfo> tmp=allAppsCache;
             if(tmp.isEmpty()){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);} tmp=new ArrayList<>(map.values()); }
             final List<ResolveInfo> src=tmp;
-            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(12,12,12,12);
-            AlertDialog dlg=createModernDialog("Grille 5x5 - "+favPkgs.size()+"/25", rv);
+            Dialog dlg=new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+            dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
+            dlg.getWindow().setLayout(-1,-1);
+            LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
+            TextView title=new TextView(this); title.setText("Choisir apps 5x5 - "+favPkgs.size()+"/25"); title.setTextSize(18); title.setTextColor(Color.WHITE); title.setPadding(40,60,40,30); title.setTypeface(null, Typeface.BOLD); root.addView(title);
+            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(12,12,12,getNavBarH()+20); rv.setClipToPadding(false);
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
-                public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(9); lb.setTextColor(Color.WHITE); } return new H(vv); }
+                public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(2); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(9); lb.setTextColor(Color.WHITE); lb.setGravity(Gravity.CENTER); } return new H(vv); }
                 public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=src.get(pos); String pkg=ri.activityInfo.packageName; h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(pkg); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); boolean added=favPkgs.contains(pkg); h.itemView.setAlpha(added?0.35f:1f);
-                    h.itemView.setOnClickListener(v->{ if(favPkgs.contains(pkg)) favPkgs.remove(pkg); else { if(favPkgs.size()>=25){ Toast.makeText(MainActivity.this,"Max 25",0).show(); return; } favPkgs.add(pkg); } saveFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter()); notifyDataSetChanged(); }); }
+                    h.itemView.setOnClickListener(v->{ if(favPkgs.contains(pkg)) favPkgs.remove(pkg); else { if(favPkgs.size()>=25){ Toast.makeText(MainActivity.this,"Max 25",0).show(); return; } favPkgs.add(pkg); } saveFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter()); title.setText("Choisir apps 5x5 - "+favPkgs.size()+"/25"); notifyDataSetChanged(); }); }
                 public int getItemCount(){ return src.size(); }
             });
-            dlg.show();
+            root.addView(rv,new LinearLayout.LayoutParams(-1,-1)); dlg.setContentView(root); dlg.show();
         }catch(Exception e){}
     }
-
     void handleWeb(){ if(searchWeb==null) return; String q=searchWeb.getText().toString().trim(); if(q.isEmpty()) return; String url=q.contains(" ")?"https://www.google.com/search?q="+Uri.encode(q):q.startsWith("http")?q:"https://"+q; try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }catch(Exception e){} }
     void applyGlassTheme(int col){ try{ float dens=getResources().getDisplayMetrics().density; for(String n:new String[]{"searchAppsMain","searchWebMain"}){ View v=findV(n); if(v!=null) v.setBackground(glassBg(col, 28*dens, 92)); } View dock=findV("dock","dockBar","dock_container","dockContainer","bottomDock"); if(dock!=null) dock.setBackground(glassBg(col, 26*dens, 68)); }catch(Exception e){} }
     void checkAndAskPermissions(){ try{ if(Build.VERSION.SDK_INT>=33){ if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_MEDIA_IMAGES)!=PackageManager.PERMISSION_GRANTED) ActivityCompat.requestPermissions(this,new String[]{android.Manifest.permission.READ_MEDIA_IMAGES},101); } }catch(Exception e){} }
 
     class SuggAdapter extends RecyclerView.Adapter<SuggAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ ResolveInfo ri=suggList.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(ri.activityInfo.packageName); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launchInstant(ri.activityInfo.packageName)); }catch(Exception e){} } public int getItemCount(){ return suggList.size(); } }
-    class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(10); lb.setTextColor(Color.WHITE); } return new H(vv); } public void onBindViewHolder(H h,int pos){ try{ String pkg=favPkgs.get(pos); ResolveInfo ri=null; for(ResolveInfo r:allAppsCache){ if(r.activityInfo.packageName.equals(pkg)){ ri=r; break; } } if(ri!=null) h.lb.setText(ri.loadLabel(getPackageManager())); else h.lb.setText(pkg); Drawable cd=iconCache.get(pkg); if(cd!=null) h.ic.setImageDrawable(cd); else h.ic.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launchInstant(pkg)); h.itemView.setOnLongClickListener(v->{ favPkgs.remove(pos); saveFavs(); notifyDataSetChanged(); return true; }); }catch(Exception e){} } public int getItemCount(){ return favPkgs.size(); } }
+    class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(2); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(10); lb.setTextColor(Color.WHITE); lb.setGravity(Gravity.CENTER); } return new H(vv); } public void onBindViewHolder(H h,int pos){ try{ String pkg=favPkgs.get(pos); ResolveInfo ri=null; for(ResolveInfo r:allAppsCache){ if(r.activityInfo.packageName.equals(pkg)){ ri=r; break; } } h.lb.setText(ri!=null?ri.loadLabel(getPackageManager()):pkg); Drawable cd=iconCache.get(pkg); if(cd!=null) h.ic.setImageDrawable(cd); else h.ic.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launchInstant(pkg)); h.itemView.setOnLongClickListener(v->{ favPkgs.remove(pos); saveFavs(); notifyDataSetChanged(); return true; }); }catch(Exception e){} } public int getItemCount(){ return favPkgs.size(); } }
 }
