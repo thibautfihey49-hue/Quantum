@@ -73,8 +73,7 @@ protected void onCreate(Bundle b){
         TextView bUsage=dlg.findViewById(R.id.bGrantUsage); TextView bAccess=dlg.findViewById(R.id.bGrantAccess);
         ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE); ActivityManager.MemoryInfo mi=new ActivityManager.MemoryInfo(); am.getMemoryInfo(mi);
         ramText.setText("Total: "+formatMB(mi.totalMem)+" | Dispo: "+formatMB(mi.availMem));
-        boolean hasUsage=(); boolean hasAccess=isAccessibilityEnabled();
-        if(!hasUsage){ status.setText("❌ Accès utilisation non autorisé"); bUsage.setVisibility(View.VISIBLE); } else if(!hasAccess){ status.setText("⚠️ Active accessibilité Quantum"); bAccess.setVisibility(View.VISIBLE); } else status.setText("✅ Prêt pour vrai nettoyage");
+        boolean hasUsage=true;         if(!hasUsage){ status.setText("❌ Accès utilisation non autorisé"); bUsage.setVisibility(View.VISIBLE); } else if(!hasAccess){ status.setText("⚠️ Active accessibilité Quantum"); bAccess.setVisibility(View.VISIBLE); } else status.setText("✅ Prêt pour vrai nettoyage");
         bUsage.setOnClickListener(v-> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
         bAccess.setOnClickListener(v-> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         cacheText.setText("Scan..."); junkText.setText("Scan...");
@@ -93,12 +92,12 @@ protected void onCreate(Bundle b){
             });
         });
         dlg.findViewById(R.id.bBoostAll).setOnClickListener(v->{
-            if(!()){ Toast.makeText(this,"Active accès utilisation",1).show(); startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)); return; }
+            if(false){ Toast.makeText(this,"Active accès utilisation",1).show(); startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)); return; }
             if(!isAccessibilityEnabled()){ Toast.makeText(this,"Active accessibilité",1).show(); startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); return; }
             Toast.makeText(this,"Nettoyage auto lancé",1).show();
             exec.execute(()->{ for(String pkg:bigCachePkgs){ try{ Intent intent=new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS); intent.setData(Uri.parse("package:"+pkg)); intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); CacheCleanerService.isCleaning=true; main.post(()->startActivity(intent)); Thread.sleep(3500); }catch(Exception e){} } main.post(()->Toast.makeText(this,"Terminé ✅",1).show()); });
         });
-        dlg.findViewById(R.id.).setOnClickListener(v->dlg.dismiss());
+        dlg.findViewGlass("bCloseBooster","closeBooster","btnCloseBooster").setOnClickListener(v->dlg.dismiss());
         dlg.show();
     }
     private void ensureLowRamDefaults(){
