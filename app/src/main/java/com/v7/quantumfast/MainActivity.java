@@ -4,6 +4,7 @@ import android.content.*;
 import android.content.pm.*;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.*;
 import android.provider.Settings;
@@ -106,7 +107,7 @@ public class MainActivity extends Activity {
         float dens=getResources().getDisplayMetrics().density;
         LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
         String[] opts={"🎨 Choisir couleur thème","🖼️ Choisir fond d'écran","🧹 Effacer fond d'écran","ℹ️ À propos"};
-        for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(14*dens),(int)(14*dens),(int)(14*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 55)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==2){ prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findViewGlass("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); Toast.makeText(this,"Fond effacé",0).show(); } else { AlertDialog d=createModernDialog("Quantum",null); d.show(); } }); list.addView(row); }
+        for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(14*dens),(int)(14*dens),(int)(14*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 55)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==2){ prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findViewGlass("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); Toast.makeText(this,"Fond effacé",0).show(); } else { AlertDialog d=createModernDialog("Quantum",null); d.show(); } }); list.addView(row); }
         AlertDialog dlg=createModernDialog("Menu", list); dlg.show();
     }
 
