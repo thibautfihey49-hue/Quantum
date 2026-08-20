@@ -28,7 +28,7 @@ public class MainActivity extends android.app.Activity {
         mainRoot=findViewById(R.id.root);
         searchApps=findViewById(R.id.searchAppsMain);
         searchWeb=findViewById(R.id.searchWebMain);
-        rvSugg=findViewGlass("rvSuggestions","rvSugg","suggestions");
+        rvSugg=(RecyclerView)findViewGlass("rvSuggestions","rvSugg","suggestions");
         try{ View cl=findViewGlass("clearApps","btnClear","clear"); if(cl!=null) cl.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); }); }catch(Exception e){}
         try{ View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setOnClickListener(v->{ if(searchWeb!=null){ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooserGlass(q); }}); }catch(Exception e){}
         try{ View fav=findViewGlass("btnAddFav","Fav","fav","addFav"); if(fav!=null) fav.setOnClickListener(v->showAddFavDialog()); }catch(Exception e){}
