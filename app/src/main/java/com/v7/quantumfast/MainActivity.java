@@ -1,276 +1,290 @@
 package com.v7.quantumfast;
-import android.app.AlertDialog;
-import android.content.*;
-import android.content.pm.*;
-import android.graphics.*;
-import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
-import android.os.Bundle;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.*;
-import androidx.recyclerview.widget.*;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import android.app.AppOpsManager; import android.app.Activity; import android.app.ActivityManager; import android.app.admin.DevicePolicyManager; import android.app.usage.StorageStats; import android.app.usage.StorageStatsManager; import android.content.*; import android.content.pm.*; import android.graphics.*;
+import android.graphics.drawable.GradientDrawable; import android.graphics.drawable.Drawable; import android.net.Uri; import android.os.*; import android.os.storage.StorageManager; import android.provider.Settings; import android.view.*; import android.view.inputmethod.EditorInfo; import android.widget.*; import androidx.core.app.ActivityCompat; import androidx.core.content.ContextCompat; import androidx.recyclerview.widget.*; import java.io.*; import java.util.*; import java.util.concurrent.*; import java.text.SimpleDateFormat;
+public class MainActivity extends Activity {
+    android.content.BroadcastReceiver timeReceiver;
+    android.content.BroadcastReceiver pkgReceiver;
+    android.content.BroadcastReceiver batteryReceiver;
+    boolean cacheLoaded=false;
 
-public class MainActivity extends android.app.Activity {
-    View mainRoot;
-    EditText searchApps, searchWeb;
-    RecyclerView rvSugg;
-    SharedPreferences prefs;
-    List<ResolveInfo> suggList=new ArrayList<>();
-    String[] dockKeys={"dock_phone","dock_msg","dock_extra","dock_drawer","dock_cam","dock_chrome"};
-    String[] defaultPkgs={"com.android.dialer","com.google.android.apps.messaging","com.android.settings","com.v7.quantumfast","com.android.camera2","com.android.chrome"};
-
-    @Override protected void onCreate(Bundle b){
+ EditText searchApps; EditText searchWeb;
+    ImageView wallpaperView; ExecutorService exec = Executors.newSingleThreadExecutor(); Handler main = new Handler(Looper.getMainLooper());
+    List<ResolveInfo> cache = Collections.synchronizedList(new ArrayList<>()); Map<String,Drawable> iconCache = new ConcurrentHashMap<>(); Map<String,String> labelCache = new ConcurrentHashMap<>(); Map<String,Long> usageMap = new HashMap<>(); long lastClick=0;
+    SharedPreferences prefs; String[] dockKeys={"dock_0","dock_1","dock_2","dock_3","dock_4","dock_5"}; String[] defaultPkgs={"com.android.dialer","com.google.android.gm","com.google.android.apps.messaging","com.google.android.calendar","com.android.camera2","com.android.chrome"};
+    RecyclerView rvSugg, rvFav, rvFolders; List<ResolveInfo> suggList = new ArrayList<>(); SuggAdapter suggAd;
+    static class Fav{ String name; String url; Fav(String n,String u){name=n;url=u;} } List<Fav> favs = new ArrayList<>(); FavAdapter favAd;
+    static class Folder{ String name; List<String> pkgs; Folder(String n,List<String> p){name=n;pkgs=p;} } List<Folder> folders = new ArrayList<>(); FolderAdapter folderAd;
+    List<String> bigCachePkgs=new ArrayList<>();
+    @Override protected void onResume(){ super.onResume(); clearSearchNow(); }
+protected void onCreate(Bundle b){
         super.onCreate(b);
+ try{ getWindow().setBackgroundDrawable(null); }catch(Exception e){}
+ registerTimeTick();
+ registerPkgReceiver();
+ registerBatteryReceiver();
+        getWindow().setStatusBarColor(0); getWindow().setNavigationBarColor(0);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        getWindow().setBackgroundDrawableResource(android.R.color.black);
         setContentView(R.layout.activity_main);
-        prefs=getSharedPreferences("dock",0);
-        mainRoot=findViewById(R.id.root);
-        searchApps=findViewById(R.id.searchAppsMain);
-        searchWeb=findViewById(R.id.searchWebMain);
-        rvSugg=(RecyclerView)findViewGlass("rvSuggestions","rvSugg","suggestions");
-        if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setAdapter(new SuggAdapter()); }
-
-        try{ View cl=findViewGlass("clearApps","btnClear","clear","clearAppsMain"); if(cl!=null) cl.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); }); }catch(Exception e){}
-        try{ View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setOnClickListener(v->{ if(searchWeb!=null){ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooserGlass(q); }}); }catch(Exception e){}
-        try{ View fav=findViewGlass("btnAddFav","Fav","fav"); if(fav!=null) fav.setOnClickListener(v->showAddFavDialog()); }catch(Exception e){}
-        try{ View fol=findViewGlass("btnAddFolder","Folder","folder"); if(fol!=null) fol.setOnClickListener(v->showCreateFolderDialog()); }catch(Exception e){}
-        try{ View men=findViewGlass("btnMenu","Menu","menu"); if(men!=null) men.setOnClickListener(v->showGlassMenu()); }catch(Exception e){}
-
-        setupAtAGlanceSimple();
-        setupDock();
-        preloadFast();
-
-        int saved=getSharedPreferences("glass",0).getInt("glass_color",0);
-        if(saved!=0) applyGlassTheme(saved);
-        else applyGlassTheme(0xFF8A8A7A); // neutre si rien
-
-        if(searchApps!=null){
-            searchApps.addTextChangedListener(new android.text.TextWatcher(){
-                public void beforeTextChanged(CharSequence s,int a,int b,int c){}
-                public void onTextChanged(CharSequence s,int a,int b,int c){ filterApps(s.toString()); }
-                public void afterTextChanged(android.text.Editable s){}
+        requestAllPerms();
+        wallpaperView=findViewById(R.id.wallpaperView); prefs=getSharedPreferences("dock",0); loadUsage();
+        rvSugg=findViewById(R.id.rvSuggestions); rvFav=findViewById(R.id.rvFavorites); rvFolders=findViewById(R.id.rvFolders);
+        rvSugg.setHasFixedSize(true); rvSugg.setItemAnimator(null); rvFav.setHasFixedSize(true); rvFav.setItemAnimator(null); rvFolders.setHasFixedSize(true); rvFolders.setItemAnimator(null);
+        rvSugg.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this,5)); suggAd=new SuggAdapter(); rvSugg.setAdapter(suggAd);
+        rvFav.setLayoutManager(new GridLayoutManager(this,5)); loadFavs(); favAd=new FavAdapter(); rvFav.setAdapter(favAd);
+        rvFolders.setLayoutManager(new GridLayoutManager(this,5)); loadFolders(); ensureLowRamDefaults(); folderAd=new FolderAdapter(); rvFolders.setAdapter(folderAd);
+        if(!cacheLoaded) preloadFast(); setupAtAGlanceSimple(); setupDock(); loadWallpaperFast(); setupGestures();
+        searchApps=findViewById(R.id.searchAppsMain); searchWeb=findViewById(R.id.searchWebMain); TextView clear=findViewById(R.id.clearApps);
+        final Runnable[] debounce=new Runnable[1];
+        searchApps.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int a,int b,int c){} public void afterTextChanged(android.text.Editable s){}
+            public void onTextChanged(CharSequence q,int bb,int cc,int dd){
+                if(debounce[0]!=null) main.removeCallbacks(debounce[0]);
+                debounce[0]=()->{
+                    String qq=q.toString().trim(); if(qq.isEmpty()){ main.post(()->{ rvSugg.setVisibility(View.GONE); clear.setVisibility(View.GONE); suggList.clear(); if(!rvSugg.isComputingLayout()) suggAd.notifyDataSetChanged(); }); return; }
+                    List<ResolveInfo> snap; synchronized(cache){ snap=new ArrayList<>(cache); }
+                    List<ResolveInfo> r=new ArrayList<>(); String low=qq.toLowerCase();
+                    for(ResolveInfo ri:snap){ String lbl=labelCache.get(ri.activityInfo.packageName); if(lbl!=null && lbl.toLowerCase().contains(low)){ r.add(ri); if(r.size()>=12) break; } }
+                    r.sort((x,y)-> Long.compare(usageMap.getOrDefault(y.activityInfo.packageName,0L), usageMap.getOrDefault(x.activityInfo.packageName,0L)));
+                    main.post(()->{ clear.setVisibility(View.VISIBLE); suggList.clear(); suggList.addAll(r); rvSugg.setVisibility(r.isEmpty()?View.GONE:View.VISIBLE); if(!rvSugg.isComputingLayout()) suggAd.notifyDataSetChanged(); });
+                }; main.postDelayed(debounce[0], 50);
+            }
+        });
+        clear.setOnClickListener(v->searchApps.setText(""));
+        searchWeb.setOnEditorActionListener((v,actionId,event)->{ if(actionId==EditorInfo.IME_ACTION_SEARCH){ String q=v.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooserGlass(q); return true;} return false; });
+        findViewById(R.id.btnWebGo).setOnClickListener(v->{ String q=searchWeb.getText().toString().trim(); if(!q.isEmpty()) showBrowserChooserGlass(q); });
+        findViewById(R.id.btnAddFav).setOnClickListener(v->showAddFavDialog());
+        findViewById(R.id.btnAddFolder).setOnClickListener(v->showCreateFolderDialog());
+        findViewById(R.id.btnBooster).setOnClickListener(v->showRealBoosterDialog());
+        main.postDelayed(()->{ if(!isDefaultLauncher()) showGlassDialog(); }, 800);
+        findViewById(R.id.btnMenu).setOnClickListener(v->showGlassMenu());
+    }
+    void setupGestures(){ GestureDetector gd=new GestureDetector(this, new GestureDetector.SimpleOnGestureListener(){
+        @Override public boolean onFling(MotionEvent e1, MotionEvent e2, float vx, float vy){ float dy=e2.getY()-e1.getY(); if(Math.abs(dy)>200){ if(dy<0){ openDrawerWithQuery(""); return true; } } return false; }
+        @Override public boolean onDoubleTap(MotionEvent e){ try{ DevicePolicyManager dpm=(DevicePolicyManager)getSystemService(DEVICE_POLICY_SERVICE); if(dpm.isAdminActive(new ComponentName(MainActivity.this, AdminReceiver.class))) dpm.lockNow(); }catch(Exception ex){} return true; }
+    }); View root=findViewById(R.id.root); root.setOnTouchListener((v,ev)->{ gd.onTouchEvent(ev); return false; }); }
+    void loadUsage(){ Map<String,?> all=prefs.getAll(); for(Map.Entry<String,?> e:all.entrySet()) if(e.getKey().startsWith("use_")&& e.getValue() instanceof Long) usageMap.put(e.getKey().substring(4),(Long)e.getValue()); }
+    void trackUsage(String pkg){ long now=System.currentTimeMillis(); usageMap.put(pkg,now); prefs.edit().putLong("use_"+pkg,now).apply(); }
+    void requestAllPerms(){ List<String> need=new ArrayList<>(); String[] all={android.Manifest.permission.READ_MEDIA_IMAGES, android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS}; for(String p:all){ if(ContextCompat.checkSelfPermission(this,p)!=PackageManager.PERMISSION_GRANTED) need.add(p); } if(!need.isEmpty()) ActivityCompat.requestPermissions(this, need.toArray(new String[0]), 999); }
+    void showRealBoosterDialog(){
+        android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_booster);
+        TextView status=dlg.findViewById(R.id.boosterStatus); TextView ramText=dlg.findViewById(R.id.ramText); TextView cacheText=dlg.findViewById(R.id.cacheText); TextView cacheCount=dlg.findViewById(R.id.cacheCount); TextView junkText=dlg.findViewById(R.id.junkText); TextView junkList=dlg.findViewById(R.id.junkList);
+        TextView bUsage=dlg.findViewById(R.id.bGrantUsage); TextView bAccess=dlg.findViewById(R.id.bGrantAccess);
+        ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE); ActivityManager.MemoryInfo mi=new ActivityManager.MemoryInfo(); am.getMemoryInfo(mi);
+        ramText.setText("Total: "+formatMB(mi.totalMem)+" | Dispo: "+formatMB(mi.availMem));
+        boolean hasUsage=(); boolean hasAccess=isAccessibilityEnabled();
+        if(!hasUsage){ status.setText("❌ Accès utilisation non autorisé"); bUsage.setVisibility(View.VISIBLE); } else if(!hasAccess){ status.setText("⚠️ Active accessibilité Quantum"); bAccess.setVisibility(View.VISIBLE); } else status.setText("✅ Prêt pour vrai nettoyage");
+        bUsage.setOnClickListener(v-> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
+        bAccess.setOnClickListener(v-> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
+        cacheText.setText("Scan..."); junkText.setText("Scan...");
+        exec.execute(()->{
+            long[] res=scanRealCache();
+            final long fTotal=res[0]; final int fCount=(int)res[1];
+            List<File> junks=scanJunk(); long jSize=0; for(File f:junks) jSize+=f.length();
+            final long fJSize=jSize;
+            StringBuilder sb=new StringBuilder(); for(int i=0;i<Math.min(6,junks.size());i++) sb.append("• ").append(junks.get(i).getName()).append("\n");
+            final String fSb=sb.toString();
+            main.post(()->{
+                cacheText.setText(formatMB(fTotal));
+                cacheCount.setText(fCount+" apps");
+                junkText.setText(formatMB(fJSize));
+                junkList.setText(fSb.isEmpty()?"Aucun":fSb);
             });
-        }
+        });
+        dlg.findViewById(R.id.bBoostAll).setOnClickListener(v->{
+            if(!()){ Toast.makeText(this,"Active accès utilisation",1).show(); startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)); return; }
+            if(!isAccessibilityEnabled()){ Toast.makeText(this,"Active accessibilité",1).show(); startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); return; }
+            Toast.makeText(this,"Nettoyage auto lancé",1).show();
+            exec.execute(()->{ for(String pkg:bigCachePkgs){ try{ Intent intent=new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS); intent.setData(Uri.parse("package:"+pkg)); intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); CacheCleanerService.isCleaning=true; main.post(()->startActivity(intent)); Thread.sleep(3500); }catch(Exception e){} } main.post(()->Toast.makeText(this,"Terminé ✅",1).show()); });
+        });
+        dlg.findViewById(R.id.).setOnClickListener(v->dlg.dismiss());
+        dlg.show();
     }
+    private void ensureLowRamDefaults(){
+ try{
+  if(folders==null || folders.isEmpty()){
+   Folder f=new Folder("Tout Low-RAM", lowRamDefaultPkgs());
+   folders.add(f);
+   saveFolders();
+  }
+ }catch(Exception e){}
+}
 
-    View findViewGlass(String...names){
-        for(String n:names){
-            int id=getResources().getIdentifier(n,"id",getPackageName());
-            if(id!=0){ View v=findViewById(id); if(v!=null) return v; }
-        }
-        return null;
+
+
+
+
+void clearSearchNow(){
+ try{
+  if(searchApps!=null){ searchApps.setText(""); searchApps.clearFocus(); }
+  if(searchWeb!=null){ searchWeb.setText(""); searchWeb.clearFocus(); }
+  android.widget.EditText a = findViewById(R.id.searchAppsMain);
+  if(a!=null){ a.setText(""); a.clearFocus(); }
+  android.widget.EditText w = findViewById(R.id.searchWebMain);
+  if(w!=null){ w.setText(""); w.clearFocus(); }
+  android.widget.EditText d = findViewById(R.id.search);
+  if(d!=null){ d.setText(""); d.clearFocus(); }
+ }catch(Exception e){}
+ try{
+  android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager)getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+  if(imm!=null){
+   if(searchApps!=null) imm.hideSoftInputFromWindow(searchApps.getWindowToken(),0);
+   if(searchWeb!=null) imm.hideSoftInputFromWindow(searchWeb.getWindowToken(),0);
+   android.view.View cf = getCurrentFocus();
+   if(cf!=null) imm.hideSoftInputFromWindow(cf.getWindowToken(),0);
+  }
+ }catch(Exception e){}
+}
+
+
+void registerTimeTick(){
+    try{ }catch(Exception e){}
+ timeReceiver = new android.content.BroadcastReceiver(){
+  public void onReceive(android.content.Context c, android.content.Intent i){
+   try{ updateClock(); }catch(Exception e){}
+  }
+ };
+ registerReceiver(timeReceiver, new android.content.IntentFilter(android.content.Intent.ACTION_TIME_TICK));
+}
+void updateClock(){
+ try{
+  android.widget.TextView tv=findViewById(R.id.clock);
+  if(tv!=null) tv.setText(new java.text.SimpleDateFormat("HH:mm", java.util.Locale.FRANCE).format(new java.util.Date()));
+ }catch(Exception e){}
+}
+
+void registerPkgReceiver(){
+ try{ if(pkgReceiver!=null) unregisterReceiver(pkgReceiver); }catch(Exception e){}
+ pkgReceiver = new android.content.BroadcastReceiver(){
+  public void onReceive(android.content.Context c, android.content.Intent i){
+   cacheLoaded=false;
+   try{ preloadFast(); }catch(Exception e){}
+  }
+ };
+ android.content.IntentFilter f=new android.content.IntentFilter();
+ f.addAction(android.content.Intent.ACTION_PACKAGE_ADDED);
+ f.addAction(android.content.Intent.ACTION_PACKAGE_REMOVED);
+ f.addDataScheme("package");
+ registerReceiver(pkgReceiver, f);
+}
+
+void registerBatteryReceiver(){
+ try{ if(batteryReceiver!=null) unregisterReceiver(batteryReceiver); }catch(Exception e){}
+ batteryReceiver = new android.content.BroadcastReceiver(){
+  public void onReceive(android.content.Context c, android.content.Intent i){
+   try{
+    int level = i.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+    int scale = i.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1);
+    int pct = level>=0 && scale>0 ? (level*100)/scale : 100;
+    updateClock();
+   }catch(Exception e){}
+  }
+ };
+ registerReceiver(batteryReceiver, new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
+}
+
+android.graphics.drawable.Drawable getCachedIcon(String pkg, android.content.pm.PackageManager pm){
+ try{
+  android.graphics.drawable.Drawable d = iconCache.get(pkg);
+  if(d!=null) return d;
+  d = pm.getApplicationIcon(pkg);
+  if(d!=null) iconCache.put(pkg,d);
+  return d;
+ }catch(Exception e){ return null; }
+}
+void saveFolders(){ StringBuilder sb=new StringBuilder(); for(int i=0;i<folders.size();i++){ if(i>0) sb.append(";;"); sb.append(folders.get(i).name).append("||").append(String.join(",",folders.get(i).pkgs)); } prefs.edit().putString("folders",sb.toString()).apply(); }
+    void showCreateFolderDialog(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_folder_create); EditText nameEd=dlg.findViewById(R.id.folderName); RecyclerView rv=dlg.findViewById(R.id.folderAppList); rv.setHasFixedSize(true); rv.setItemAnimator(null); rv.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this,5)); List<ResolveInfo> all; synchronized(cache){ all=new ArrayList<>(cache); } Set<String> selected=new HashSet<>(); RecyclerView.Adapter adapter=new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; CheckBox cb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label); cb=v.findViewById(R.id.check);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app_check,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=all.get(pos); String pkg=ri.activityInfo.packageName; String lbl=labelCache.getOrDefault(pkg, ri.loadLabel(getPackageManager()).toString()); h.lb.setText(lbl); Drawable d=iconCache.get(pkg); if(d!=null) h.ic.setImageDrawable(d); h.cb.setOnCheckedChangeListener(null); h.cb.setChecked(selected.contains(pkg)); h.cb.setOnCheckedChangeListener((bb,is)->{ if(is) selected.add(pkg); else selected.remove(pkg); }); h.itemView.setOnClickListener(v->{ if(selected.contains(pkg)) selected.remove(pkg); else selected.add(pkg); h.cb.setChecked(selected.contains(pkg)); }); } public int getItemCount(){ return all.size(); } }; rv.setAdapter(adapter); dlg.findViewById(R.id.bCancel).setOnClickListener(v->dlg.dismiss()); dlg.findViewById(R.id.bCreate).setOnClickListener(v->{ String n=nameEd.getText().toString().trim(); if(n.isEmpty()) n="Dossier"; if(selected.isEmpty()){ Toast.makeText(this,"Coche au moins 1 app",0).show(); return; } folders.add(new Folder(n,new ArrayList<>(selected))); saveFolders(); folderAd.notifyDataSetChanged(); dlg.dismiss(); }); dlg.show(); }
+    void showFolderContent(Folder f){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.setContentView(R.layout.picker_dock); RecyclerView rv=dlg.findViewById(R.id.recyclerDock); rv.setLayoutManager(new GridLayoutManager(this,5)); List<ResolveInfo> list=new ArrayList<>(); synchronized(cache){ for(ResolveInfo ri:cache) if(f.pkgs.contains(ri.activityInfo.packageName)) list.add(ri); } rv.setAdapter(new RecyclerView.Adapter(){ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=list.get(pos); h.lb.setText(labelCache.getOrDefault(ri.activityInfo.packageName, ri.loadLabel(getPackageManager()).toString())); Drawable d=iconCache.get(ri.activityInfo.packageName); if(d!=null) h.ic.setImageDrawable(d); h.itemView.setOnClickListener(v->{ launch(ri.activityInfo.packageName); dlg.dismiss(); }); } public int getItemCount(){ return list.size(); } }); dlg.show(); }
+    boolean isDefaultLauncher(){ Intent home = new Intent(Intent.ACTION_MAIN); home.addCategory(Intent.CATEGORY_HOME); ResolveInfo ri = getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY); return ri!=null && ri.activityInfo!=null && getPackageName().equals(ri.activityInfo.packageName); }
+    void showGlassDialog(){ if(prefs.getBoolean("asked_default", false)) return; android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ prefs.edit().putBoolean("asked_default", true).apply(); dlg.dismiss(); try{ Intent i = new Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS); startActivity(i);}catch(Exception e){} }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->{ prefs.edit().putBoolean("asked_default", true).apply(); dlg.dismiss(); }); dlg.show(); }
+    void showGlassMenu(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); ((TextView)dlg.findViewById(R.id.dTitle)).setText("Quantum V2"); ((TextView)dlg.findViewById(R.id.dMsg)).setText("Vrai nettoyeur"); ((TextView)dlg.findViewById(R.id.bOk)).setText("Fond"); ((TextView)dlg.findViewById(R.id.bCancel)).setText("Tiroir"); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ dlg.dismiss(); pickWallpaperInternal(); }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->{ dlg.dismiss(); openDrawerWithQuery(""); }); dlg.show(); }
+    public void onTrimMemory(int level){ super.onTrimMemory(level); if(iconCache!=null) iconCache.clear(); if(level>=40) DiskIconCache.clear(this); }
+ void loadWallpaperFast(){ String uriStr=prefs.getString("custom_wallpaper_uri",null); if(uriStr==null) return; exec.execute(()->{ try{ Uri uri=Uri.parse(uriStr); InputStream is=getContentResolver().openInputStream(uri); if(is==null) return; BitmapFactory.Options opts=new BitmapFactory.Options(); opts.inJustDecodeBounds=true; BitmapFactory.decodeStream(is,null,opts); is.close(); int reqW=getResources().getDisplayMetrics().widthPixels; int reqH=getResources().getDisplayMetrics().heightPixels; int sample=1; while(opts.outWidth/sample/2>=reqW && opts.outHeight/sample/2>=reqH) sample*=2; InputStream is2=getContentResolver().openInputStream(uri); if(is2==null) return; BitmapFactory.Options o2=new BitmapFactory.Options(); o2.inSampleSize=sample; o2.inPreferredConfig=Bitmap.Config.RGB_565; Bitmap bmp=BitmapFactory.decodeStream(is2,null,o2); is2.close(); main.post(()->{ if(bmp!=null &&!bmp.isRecycled()) wallpaperView.setImageBitmap(bmp); }); }catch(Exception e){} }); }
+    void pickWallpaperInternal(){ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("image/*"); i.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivityForResult(i,201); }
+    @Override protected void onActivityResult(int rc,int res,Intent data){ if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri uri=data.getData(); try{ getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri", uri.toString()).apply(); loadWallpaperFast(); } }
+    boolean tap(){ long n=SystemClock.uptimeMillis(); if(n-lastClick<250) return false; lastClick=n; return true; }
+    void clock(){ TextView c=findViewById(R.id.clock); TextView d=findViewById(R.id.date); SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE); SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE); Runnable r=new Runnable(){public void run(){ try{ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); }catch(Exception e){} main.postDelayed(this,30000);} }; r.run(); }
+    void preloadFast(){ exec.execute(()->{ try{ PackageManager pm=getPackageManager(); Intent ii=new Intent(Intent.ACTION_MAIN,null); ii.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> l=pm.queryIntentActivities(ii,0); l.sort((a,bb)->{ try{ return a.loadLabel(pm).toString().compareToIgnoreCase(bb.loadLabel(pm).toString()); }catch(Exception e){ return 0; } }); cacheLoaded=true; synchronized(cache){ cache.clear(); cache.addAll(l); for(ResolveInfo ri:l){ try{ labelCache.put(ri.activityInfo.packageName, ri.loadLabel(pm).toString()); }catch(Exception e){} } } main.post(()->setupDock()); }catch(Exception e){}}); }
+    void setupDock(){ int[] ids={R.id.dPhone,R.id.dMsg,R.id.dExtra,R.id.dDrawer,R.id.dCam,R.id.dChrome}; for(int i=0;i<ids.length;i++){ final int idx=i; View vv=findViewById(ids[i]); if(vv==null) continue; ImageView iv= vv instanceof ImageView? (ImageView)vv : (ImageView)((FrameLayout)vv).getChildAt(0); if(idx==3) continue; String pkg=findRealPkg(prefs.getString(dockKeys[idx], defaultPkgs[idx])); if(pkg!=null) updateDockIcon(iv, pkg); vv.setOnClickListener(view->{ if(idx==3) openDrawerWithQuery(""); else { String rp=findRealPkg(prefs.getString(dockKeys[idx], defaultPkgs[idx])); if(rp!=null) launch(rp); }}); vv.setOnLongClickListener(view->{ if(idx==3) return false; pickDockApp(idx); return true; }); } findViewById(R.id.dDrawer).setOnClickListener(v->openDrawerWithQuery("")); }
+
+ void pickDockApp(int dockIdx){
+        android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen);
+        dlg.setContentView(R.layout.picker_dock);
+        androidx.recyclerview.widget.RecyclerView rv=dlg.findViewById(R.id.recyclerDock);
+        rv.setHasFixedSize(true);
+        rv.setItemAnimator(null);
+        rv.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this,5));
+        java.util.List<android.content.pm.ResolveInfo> list;
+        synchronized(cache){ list=new java.util.ArrayList<>(cache); }
+        rv.setAdapter(new androidx.recyclerview.widget.RecyclerView.Adapter(){
+            class H extends androidx.recyclerview.widget.RecyclerView.ViewHolder{ android.widget.ImageView ic; android.widget.TextView lb; H(android.view.View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
+            public androidx.recyclerview.widget.RecyclerView.ViewHolder onCreateViewHolder(android.view.ViewGroup parent,int viewType){ return new H(getLayoutInflater().inflate(R.layout.item_app,parent,false)); }
+            public void onBindViewHolder(androidx.recyclerview.widget.RecyclerView.ViewHolder hh,int pos){
+                try{
+                    H h=(H)hh; if(pos>=list.size()) return;
+                    android.content.pm.ResolveInfo ri=list.get(pos);
+                    String lbl=labelCache.get(ri.activityInfo.packageName); if(lbl!=null) h.lb.setText(lbl);
+                    android.graphics.drawable.Drawable d=iconCache.get(ri.activityInfo.packageName);
+                    if(d!=null) h.ic.setImageDrawable(d);
+                    else {
+                        h.ic.setImageResource(android.R.drawable.sym_def_app_icon);
+                        exec.execute(()->{ try{ android.graphics.drawable.Drawable dd=getPackageManager().getApplicationIcon(ri.activityInfo.packageName); iconCache.put(ri.activityInfo.packageName, dd); main.post(()->{ if(h.getBindingAdapterPosition()==pos) h.ic.setImageDrawable(dd); }); }catch(Exception e){} });
+                    }
+                    h.itemView.setOnClickListener(v->{ prefs.edit().putString(dockKeys[dockIdx], ri.activityInfo.packageName).apply(); dlg.dismiss(); setupDock(); });
+                }catch(Exception e){}
+            }
+            public int getItemCount(){ return list.size(); }
+        });
+        dlg.show();
     }
-
-    // ===== wallpaper =====
-    void preloadFast(){ try{ loadWallpaperFast(); }catch(Exception e){} }
-    void loadWallpaperFast(){
+    String findRealPkg(String pkg){ if(pkg==null||pkg.isEmpty()) return null; try{ getPackageManager().getPackageInfo(pkg,0); return pkg;}catch(Exception e){} return null; }
+ void updateDockIcon(ImageView iv, String pkg){
         try{
-            String uriStr=prefs.getString("custom_wallpaper_uri","");
-            if(uriStr.isEmpty()) return;
-            Uri uri=Uri.parse(uriStr);
-            View bgv=findViewGlass("wallpaper","bg","background","wall");
-            if(bgv instanceof ImageView) ((ImageView)bgv).setImageURI(uri);
-        }catch(Exception e){}
+            android.graphics.drawable.Drawable cd=iconCache.get(pkg);
+            if(cd!=null){ iv.setImageDrawable(cd); return; }
+            android.graphics.Bitmap disk=DiskIconCache.get(this,pkg);
+            if(disk!=null){ iv.setImageBitmap(android.graphics.Bitmap.createScaledBitmap(disk,96,96,true)); return; }
+            android.graphics.drawable.Drawable d=getPackageManager().getApplicationIcon(pkg);
+            android.graphics.Bitmap bmp;
+            if(d instanceof android.graphics.drawable.BitmapDrawable){ bmp=((android.graphics.drawable.BitmapDrawable)d).getBitmap(); }
+            else { bmp=android.graphics.Bitmap.createBitmap(96,96, android.graphics.Bitmap.Config.RGB_565); android.graphics.Canvas c=new android.graphics.Canvas(bmp); d.setBounds(0,0,96,96); d.draw(c); }
+            DiskIconCache.put(this,pkg,bmp);
+            iv.setImageDrawable(d);
+            if(iconCache.size()<5) iconCache.put(pkg,d);
+        }catch(Exception e){ try{ iv.setImageResource(android.R.drawable.sym_def_app_icon); }catch(Exception ee){} }
     }
-    @Override protected void onActivityResult(int rc,int res,Intent data){
-        if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){
-            Uri uri=data.getData();
-            try{ getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }catch(Exception e){}
-            prefs.edit().putString("custom_wallpaper_uri", uri.toString()).apply();
-            loadWallpaperFast();
-        }
-    }
+    void openDrawerWithQuery(String initial){ if(!tap() && (initial==null || initial.isEmpty())) return; android.app.Dialog dlg=new android.app.Dialog(this,android.R.style.Theme_Translucent_NoTitleBar_Fullscreen); dlg.getWindow().setStatusBarColor(0); dlg.getWindow().setNavigationBarColor(0); dlg.setContentView(R.layout.drawer); RecyclerView rv=dlg.findViewById(R.id.recycler); EditText s=dlg.findViewById(R.id.search); rv.setHasFixedSize(true); rv.setItemAnimator(null); rv.setLayoutManager(new GridLayoutManager(this,5)); final List<ResolveInfo> filt = new ArrayList<>(); if(initial==null) initial=""; String lowInit=initial.toLowerCase(); synchronized(cache){ if(lowInit.isEmpty()) filt.addAll(cache); else for(ResolveInfo ri:cache) { String lbl=labelCache.get(ri.activityInfo.packageName); if(lbl!=null && lbl.toLowerCase().contains(lowInit)) filt.add(ri); } } filt.sort((x,y)-> Long.compare(usageMap.getOrDefault(y.activityInfo.packageName,0L), usageMap.getOrDefault(x.activityInfo.packageName,0L))); final FastAdapter ad = new FastAdapter(filt,getPackageManager(),dlg); rv.setAdapter(ad); s.setText(initial); final Runnable[] runHolder = new Runnable[1]; s.addTextChangedListener(new android.text.TextWatcher(){ public void beforeTextChanged(CharSequence qq,int b,int c,int d){} public void afterTextChanged(android.text.Editable e){} public void onTextChanged(CharSequence qq,int b,int c,int dd){ if(runHolder[0]!=null) main.removeCallbacks(runHolder[0]); runHolder[0]=()->{ String qqq=qq.toString().toLowerCase().trim(); List<ResolveInfo> r=new ArrayList<>(); List<ResolveInfo> snap; synchronized(cache){ snap=new ArrayList<>(cache); } if(qqq.isEmpty()) r.addAll(snap); else for(ResolveInfo ri:snap){ String lbl=labelCache.get(ri.activityInfo.packageName); if(lbl!=null && lbl.toLowerCase().contains(qqq)) r.add(ri); } r.sort((x,y)-> Long.compare(usageMap.getOrDefault(y.activityInfo.packageName,0L), usageMap.getOrDefault(x.activityInfo.packageName,0L))); main.post(()->{ filt.clear(); filt.addAll(r); if(!rv.isComputingLayout()) ad.notifyDataSetChanged(); else rv.post(()->ad.notifyDataSetChanged()); }); }; main.postDelayed(runHolder[0],50); } }); dlg.findViewById(R.id.close).setOnClickListener(v->dlg.dismiss()); dlg.show(); }
+    void launch(String pkg){ try{ android.content.Intent ii=getPackageManager().getLaunchIntentForPackage(pkg); if(ii!=null){ ii.addFlags(android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT); clearSearchNow(); startActivity(ii); return; } }catch(Exception e){}  try{ trackUsage(pkg); Intent it=getPackageManager().getLaunchIntentForPackage(pkg); if(it!=null){ it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); clearSearchNow(); startActivity(it);} }catch(Exception e){} }
+    void loadFavs(){ favs.clear(); String saved=prefs.getString("favs",""); if(saved.isEmpty()){ favs.add(new Fav("Google","https://google.com")); favs.add(new Fav("YouTube","https://youtube.com")); return; } try{ for(String p:saved.split(";;")){ String[] sp=p.split("\\|\\|"); if(sp.length==2) favs.add(new Fav(sp[0],sp[1])); } }catch(Exception e){} }
+    void saveFavs(){ StringBuilder sb=new StringBuilder(); for(int i=0;i<favs.size();i++){ if(i>0) sb.append(";;"); sb.append(favs.get(i).name).append("||").append(favs.get(i).url); } prefs.edit().putString("favs", sb.toString()).apply(); }
+    void showAddFavDialog(){ android.app.Dialog dlg=new android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar); dlg.setContentView(R.layout.dialog_default); ((TextView)dlg.findViewById(R.id.dTitle)).setText("Ajouter favori"); ((TextView)dlg.findViewById(R.id.dMsg)).setText("Nom + URL"); LinearLayout lay=new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); lay.setPadding(0,16,0,0); EditText eName=new EditText(this); eName.setHint("Nom"); eName.setTextColor(Color.BLACK); eName.setHintTextColor(0x88000000); eName.setBackgroundResource(R.drawable.edit_white); eName.setPadding(24,24,24,24); LinearLayout.LayoutParams lp1=new LinearLayout.LayoutParams(-1,-2); lp1.setMargins(0,0,0,12); eName.setLayoutParams(lp1); EditText eUrl=new EditText(this); eUrl.setHint("https://..."); eUrl.setTextColor(Color.BLACK); eUrl.setHintTextColor(0x88000000); eUrl.setBackgroundResource(R.drawable.edit_white); eUrl.setPadding(24,24,24,24); lay.addView(eName); lay.addView(eUrl); ((LinearLayout)dlg.findViewById(R.id.dTitle).getParent()).addView(lay,2); ((TextView)dlg.findViewById(R.id.bOk)).setText("Ajouter"); dlg.findViewById(R.id.bOk).setOnClickListener(v->{ String n=eName.getText().toString().trim(); String u=eUrl.getText().toString().trim(); if(!n.isEmpty() &&!u.isEmpty()){ if(!u.startsWith("http")) u="https://"+u; favs.add(new Fav(n,u)); saveFavs(); if(!rvFav.isComputingLayout()) favAd.notifyDataSetChanged(); else rvFav.post(()->favAd.notifyDataSetChanged()); dlg.dismiss(); } }); dlg.findViewById(R.id.bCancel).setOnClickListener(v->dlg.dismiss()); dlg.show(); }
+    class SuggAdapter extends RecyclerView.Adapter<SuggAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ if(pos>=suggList.size()) return; ResolveInfo ri=suggList.get(pos); String lbl=labelCache.get(ri.activityInfo.packageName); if(lbl!=null) h.lb.setText(lbl); Drawable d=iconCache.get(ri.activityInfo.packageName); if(d!=null) h.ic.setImageDrawable(d); else { h.ic.setImageResource(android.R.drawable.sym_def_app_icon); exec.execute(()->{ try{ Drawable dd=getPackageManager().getApplicationIcon(ri.activityInfo.packageName); iconCache.put(ri.activityInfo.packageName, dd); main.post(()->{ if(h.getBindingAdapterPosition()==pos) h.ic.setImageDrawable(dd); }); }catch(Exception e){} }); } h.itemView.setOnClickListener(v->{ launch(ri.activityInfo.packageName); }); }catch(Exception e){} } public int getItemCount(){ return suggList.size(); } }
+    class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ TextView icon; TextView name; H(View v){super(v); icon=v.findViewById(R.id.favIcon); name=v.findViewById(R.id.favName);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_fav,p,false)); } public void onBindViewHolder(H h,int pos){ try{ if(pos>=favs.size()) return; Fav f=favs.get(pos); h.name.setText(f.name); h.icon.setText(f.name.substring(0,1).toUpperCase()); h.itemView.setOnClickListener(v->showBrowserChooserGlass(f.url)); h.itemView.setOnLongClickListener(v->{ favs.remove(pos); saveFavs(); if(!rvFav.isComputingLayout()) notifyDataSetChanged(); else rvFav.post(()->notifyDataSetChanged()); return true; }); }catch(Exception e){} } public int getItemCount(){ return favs.size(); } }
+    class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.H>{ class H extends RecyclerView.ViewHolder{ TextView name; TextView icon; H(View v){super(v); name=v.findViewById(R.id.favName); icon=v.findViewById(R.id.favIcon);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_fav,p,false)); } public void onBindViewHolder(H h,int pos){ try{ if(pos>=folders.size()) return; Folder f=folders.get(pos); h.name.setText("📁 "+f.name+" ("+f.pkgs.size()+")"); h.icon.setText("📁"); h.itemView.setOnClickListener(v->showFolderContent(f)); h.itemView.setOnLongClickListener(v->{ folders.remove(pos); saveFolders(); notifyDataSetChanged(); return true; }); }catch(Exception e){} } public int getItemCount(){ return folders.size(); } }
+    class FastAdapter extends RecyclerView.Adapter<FastAdapter.H>{ List<ResolveInfo> list; PackageManager pm; android.app.Dialog dlg; FastAdapter(List<ResolveInfo> l,PackageManager p,android.app.Dialog d){list=l;pm=p;dlg=d;} class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup pa,int t){ View v=getLayoutInflater().inflate(R.layout.item_app,pa,false); return new H(v); } public void onBindViewHolder(H h,int pos){ try{ if(pos>=list.size()) return; ResolveInfo ri=list.get(pos); String lbl=labelCache.get(ri.activityInfo.packageName); if(lbl!=null) h.lb.setText(lbl); Drawable cd=iconCache.get(ri.activityInfo.packageName); if(cd!=null) h.ic.setImageDrawable(cd); else { h.ic.setImageResource(android.R.drawable.sym_def_app_icon); exec.execute(()->{ try{ Drawable dd=pm.getApplicationIcon(ri.activityInfo.packageName); iconCache.put(ri.activityInfo.packageName,dd); main.post(()->{ if(h.getBindingAdapterPosition()==pos) h.ic.setImageDrawable(dd); }); }catch(Exception e){} }); } h.itemView.setOnClickListener(v->{ if(!tap()) return; try{ launch(ri.activityInfo.packageName); dlg.dismiss();}catch(Exception e){}}); }catch(Exception e){} } public int getItemCount(){ return list.size(); } }
+    public static class AdminReceiver extends android.app.admin.DeviceAdminReceiver {}
 
-    // ===== at a glance =====
-    void setupAtAGlanceSimple(){
-        clock();
+    void boostAllApps(){
         try{
-            IntentFilter f=new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-            BroadcastReceiver br=new BroadcastReceiver(){ public void onReceive(Context c, Intent i){
-                int lvl=i.getIntExtra("level",-1);
-                TextView tv=(TextView)findViewGlass("batteryInfo","battery","bat");
-                if(tv!=null && lvl!=-1) tv.setText("🔋 "+lvl+"%");
-            }};
-            registerReceiver(br,f);
-        }catch(Exception e){}
-    }
-    void clock(){
-        TextView c=(TextView)findViewGlass("clock","time");
-        TextView d=(TextView)findViewGlass("date","dateInfo");
-        SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE);
-        SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE);
-        Runnable r=new Runnable(){public void run(){
+            getWindow().setBackgroundDrawable(null);
+            if(wallpaperView!=null && QuantumApp.wallpaperCache!=null) wallpaperView.setImageDrawable(QuantumApp.wallpaperCache);
             try{
-                if(c!=null) c.setText(tf.format(new Date()));
-                if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris");
+                if(rvFolders!=null){ rvFolders.setHasFixedSize(true); rvFolders.setItemAnimator(null); rvFolders.setLayerType(android.view.View.LAYER_TYPE_HARDWARE,null); rvFolders.setOverScrollMode(android.view.View.OVER_SCROLL_NEVER); rvFolders.setItemViewCacheSize(500); }
             }catch(Exception e){}
-            if(mainRoot!=null) mainRoot.postDelayed(this,30000);
-        }};
-        r.run();
-    }
-
-    // ===== search =====
-    void filterApps(String q){
-        try{
-            Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER);
-            List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0);
-            suggList.clear();
-            if(q==null || q.trim().isEmpty()){
-                if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter());
-                return;
-            }
-            String lq=q.toLowerCase();
-            for(ResolveInfo ri:all){
-                String lb=ri.loadLabel(getPackageManager()).toString().toLowerCase();
-                String pkg=ri.activityInfo.packageName.toLowerCase();
-                if(lb.contains(lq) || pkg.contains(lq)) suggList.add(ri);
-            }
-            if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter());
+            try{
+                // rvSugg ou rvSuggestions selon version d'origine
+                android.view.View rv = findViewById(getResources().getIdentifier("rvSuggestions","id",getPackageName()));
+                if(rv==null) rv = findViewById(getResources().getIdentifier("rvSugg","id",getPackageName()));
+                if(rv instanceof androidx.recyclerview.widget.RecyclerView){
+                    androidx.recyclerview.widget.RecyclerView r = (androidx.recyclerview.widget.RecyclerView)rv;
+                    r.setHasFixedSize(true); r.setItemAnimator(null); r.setLayerType(android.view.View.LAYER_TYPE_HARDWARE,null); r.setOverScrollMode(android.view.View.OVER_SCROLL_NEVER); r.setItemViewCacheSize(500);
+                    try{ ((androidx.recyclerview.widget.LinearLayoutManager)r.getLayoutManager()).setInitialPrefetchItemCount(100); }catch(Exception ex){}
+                }
+            }catch(Exception e){}
+            android.os.Process.setThreadPriority(-20);
         }catch(Exception e){}
+        QuantumApp.boot();
     }
 
-    // ===== DOCK FIX - plus d'icone android marron =====
-    String resolveIntentPkg(Intent intent){
-        try{
-            List<ResolveInfo> r=getPackageManager().queryIntentActivities(intent,0);
-            if(r!=null &&!r.isEmpty()) return r.get(0).activityInfo.packageName;
-        }catch(Exception e){}
-        return null;
-    }
-    String getSmartDefault(int idx){
-        try{
-            if(idx==0){ String p=resolveIntentPkg(new Intent(Intent.ACTION_DIAL)); if(p!=null) return p; }
-            if(idx==1){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("sms:"))); if(p!=null) return p; }
-            if(idx==2) return "com.android.settings";
-            if(idx==4){ String p=resolveIntentPkg(new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)); if(p!=null) return p; }
-            if(idx==5){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("http://google.com"))); if(p!=null) return p; }
-        }catch(Exception e){}
-        return defaultPkgs[idx];
-    }
-    void setupDock(){
-        int[] ids={R.id.dPhone,R.id.dMsg,R.id.dExtra,R.id.dDrawer,R.id.dCam,R.id.dChrome};
-        for(int i=0;i<ids.length;i++){
-            final int idx=i;
-            View vv=findViewById(ids[i]); if(vv==null) continue;
-            ImageView iv;
-            if(vv instanceof ImageView) iv=(ImageView)vv;
-            else { try{ iv=(ImageView)((android.widget.FrameLayout)vv).getChildAt(0); }catch(Exception e){ continue; } }
-            if(idx==3){ vv.setOnClickListener(v->openDrawerWithQuery("")); continue; }
-            String saved=prefs.getString(dockKeys[idx], null);
-            if(saved==null) saved=getSmartDefault(idx);
-            String pkg=findRealPkg(saved);
-            if(pkg==null) pkg=getSmartDefault(idx);
-            updateDockIcon(iv,pkg);
-            vv.setOnClickListener(v->{
-                String rs=prefs.getString(dockKeys[idx], getSmartDefault(idx));
-                String rp=findRealPkg(rs);
-                if(rp==null) rp=resolveIntentPkg(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER));
-                if(rp!=null) launch(rp);
-            });
-            vv.setOnLongClickListener(v->{ pickDockApp(idx); return true; });
-        }
-        View drawer=findViewById(R.id.dDrawer); if(drawer!=null) drawer.setOnClickListener(v->openDrawerWithQuery(""));
-    }
-    String findRealPkg(String pkg){
-        if(pkg==null) return null;
-        try{ getPackageManager().getPackageInfo(pkg,0); return pkg; }catch(Exception e){ return null; }
-    }
-    void updateDockIcon(ImageView iv, String pkg){
-        try{
-            if(pkg==null) throw new Exception();
-            iv.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager()));
-            iv.setBackgroundColor(Color.TRANSPARENT);
-        }catch(Exception e){
-            iv.setImageResource(android.R.drawable.sym_def_app_icon);
-        }
-    }
-    void launch(String pkg){
-        try{ Intent ii=getPackageManager().getLaunchIntentForPackage(pkg); if(ii!=null){ ii.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT); clearSearchNow(); startActivity(ii); return; } }catch(Exception e){}
-        try{ Intent it=getPackageManager().getLaunchIntentForPackage(pkg); if(it!=null){ it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); clearSearchNow(); startActivity(it);} }catch(Exception e){}
-    }
-    void openDrawerWithQuery(String q){ if(searchApps!=null) searchApps.setText(q); }
-    void clearSearchNow(){ if(searchApps!=null) searchApps.setText(""); suggList.clear(); if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter()); }
-    void pickDockApp(int idx){
-        Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER);
-        List<ResolveInfo> apps=getPackageManager().queryIntentActivities(it,0);
-        Collections.sort(apps, (a,b)-> a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString()));
-        String[] names=new String[apps.size()]; String[] pkgs=new String[apps.size()];
-        for(int i=0;i<apps.size();i++){ names[i]=apps.get(i).loadLabel(getPackageManager()).toString(); pkgs[i]=apps.get(i).activityInfo.packageName; }
-        new AlertDialog.Builder(this).setTitle("Choisir app dock").setItems(names,(d,w)->{ prefs.edit().putString(dockKeys[idx],pkgs[w]).apply(); setupDock(); }).show();
-    }
-    void showAddFavDialog(){ Toast.makeText(this,"Fav",0).show(); }
-    void showCreateFolderDialog(){ Toast.makeText(this,"Folder",0).show(); }
-    void showBrowserChooserGlass(String q){
-        Intent i=new Intent(Intent.ACTION_VIEW, Uri.parse(q.startsWith("http")?q:"https://www.google.com/search?q="+Uri.encode(q)));
-        try{ startActivity(i); }catch(Exception e){ Toast.makeText(this,q,0).show(); }
-    }
-
-    // ===== GLASS PREMIUM - palette retravaillée =====
-    android.graphics.drawable.Drawable createGlassDrawable(int col, float rad, int alpha){
-        int fill=Color.argb(alpha, Color.red(col), Color.green(col), Color.blue(col));
-        android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable();
-        d.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-        d.setCornerRadius(rad);
-        d.setColor(fill);
-        d.setStroke((int)(1.2f*getResources().getDisplayMetrics().density), Color.argb(110,255,255,255));
-        return d;
-    }
-    void showPaletteDialog(){
-        float dens=getResources().getDisplayMetrics().density;
-        int[] pastels={0xFFFFD4E7,0xFFD4E7FF,0xFFC7B6FF,0xFFB6FFE8,0xFFFFF3B6,0xFFFFE0B2,0xFFB2DFDB,0xFFFFCCBC};
-        int[] vifs={0xFF2196F3,0xFF00BCD4,0xFF4CAF50,0xFFFFC107,0xFFFF5722,0xFFE91E63,0xFF9C27B0,0xFF3F51B5};
-        int[] all={0xFFFFCDD2,0xFFEF9A9A,0xFFE57373,0xFFF44336,0xFFD32F2F,0xFFF8BBD0,0xFFF48FB1,0xFFEC407A,0xFFE91E63,0xFFE1BEE7,0xFFCE93D8,0xFFAB47BC,0xFF9C27B0,0xFFD1C4E9,0xFFB39DDB,0xFF7E57C2,0xFF673AB7,0xFFC5CAE9,0xFF7986CB,0xFF3F51B5,0xFFBBDEFB,0xFF64B5F6,0xFF2196F3,0xFF1976D2,0xFFB2EBF2,0xFF4DD0E1,0xFF00BCD4,0xFFC8E6C9,0xFF81C784,0xFF4CAF50,0xFFDCEDC8,0xFFAED581,0xFF8BC34A,0xFFFFF9C4,0xFFFFEB3B,0xFFFBC02D,0xFFFFE0B2,0xFFFFB74D,0xFFFF9800,0xFF795548,0xFF9E9E9E,0xFF212121,0xFFFFFFFF,0xFF000000};
-
-        AlertDialog.Builder b=new AlertDialog.Builder(this); b.setTitle("Palette Glass • premium");
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding((int)(16*dens),(int)(16*dens),(int)(16*dens),(int)(16*dens));
-
-        TextView preview=new TextView(this); preview.setText(" Aperçu verre "); preview.setTextSize(18); preview.setTextColor(Color.WHITE);
-        preview.setPadding((int)(16*dens),(int)(14*dens),(int)(16*dens),(int)(14*dens));
-        preview.setBackground(createGlassDrawable(0xFF8A8A7A, 24*dens, 75));
-        root.addView(preview);
-
-        TextView t1=new TextView(this); t1.setText("Pastels"); t1.setPadding(0,(int)(12*dens),0,(int)(6*dens)); root.addView(t1);
-        GridLayout gp=new GridLayout(this); gp.setColumnCount(6);
-        for(int col:pastels){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(52*dens); lp.height=(int)(52*dens); lp.setMargins((int)(6*dens),(int)(6*dens),(int)(6*dens),(int)(6*dens)); v.setLayoutParams(lp); v.setBackground(createGlassDrawable(col, 18*dens, 95)); v.setOnClickListener(view->{ preview.setBackground(createGlassDrawable(col, 24*dens, 75)); getSharedPreferences("glass",0).edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); gp.addView(v); }
-        root.addView(gp);
-
-        TextView t2=new TextView(this); t2.setText("Vifs"); t2.setPadding(0,(int)(10*dens),0,(int)(6*dens)); root.addView(t2);
-        GridLayout gv=new GridLayout(this); gv.setColumnCount(6);
-        for(int col:vifs){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(52*dens); lp.height=(int)(52*dens); lp.setMargins((int)(6*dens),(int)(6*dens),(int)(6*dens),(int)(6*dens)); v.setLayoutParams(lp); GradientDrawable bg=new GradientDrawable(); bg.setCornerRadius(18*dens); bg.setColor(col); v.setBackground(bg); v.setOnClickListener(view->{ preview.setBackground(createGlassDrawable(col, 24*dens, 75)); getSharedPreferences("glass",0).edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); gv.addView(v); }
-        root.addView(gv);
-
-        TextView t3=new TextView(this); t3.setText("Toutes"); t3.setPadding(0,(int)(10*dens),0,(int)(6*dens)); root.addView(t3);
-        GridLayout grid=new GridLayout(this); grid.setColumnCount(6);
-        for(int col:all){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(42*dens); lp.height=(int)(42*dens); lp.setMargins((int)(5*dens),(int)(5*dens),(int)(5*dens),(int)(5*dens)); v.setLayoutParams(lp); GradientDrawable bg=new GradientDrawable(); bg.setCornerRadius(12*dens); bg.setColor(col); if(col==0xFFFFFFFF) bg.setStroke((int)dens, 0xFFCCCCCC); v.setBackground(bg); v.setOnClickListener(view->{ preview.setBackground(createGlassDrawable(col, 24*dens, 75)); getSharedPreferences("glass",0).edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); grid.addView(v); }
-        ScrollView sv=new ScrollView(this); sv.addView(grid); root.addView(sv);
-
-        b.setView(root);
-        b.setPositiveButton("HEX custom",(d,w)->{ EditText et=new EditText(this); et.setHint("#8A8A7A"); new AlertDialog.Builder(this).setTitle("HEX").setView(et).setPositiveButton("OK",(dd,ww)->{ try{ int c=Color.parseColor(et.getText().toString().trim()); getSharedPreferences("glass",0).edit().putInt("glass_color",c).apply(); applyGlassTheme(c);}catch(Exception e){} }).show(); });
-        b.setNegativeButton("Fermer",null); b.show();
-    }
-    void showGlassMenu(){ showPaletteDialog(); }
-    void applyGlassTheme(int col){
-        try{
-            float dens=getResources().getDisplayMetrics().density;
-            double lum=(0.299*Color.red(col)+0.587*Color.green(col)+0.114*Color.blue(col))/255;
-            int textCol= lum>0.6? 0xFF1A1A1A : 0xFFFFFFFF;
-            int hintCol= lum>0.6? 0x661A1A1A : 0x99FFFFFF;
-            int[] bars={R.id.searchAppsMain,R.id.searchWebMain};
-            for(int id:bars){ View v=findViewById(id); if(v!=null){ v.setBackground(createGlassDrawable(col, 32*dens, 72)); if(v instanceof EditText){ ((EditText)v).setTextColor(textCol); ((EditText)v).setHintTextColor(hintCol);} } }
-            View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setBackground(createGlassDrawable(col, 32*dens, 78));
-            View dock=findViewGlass("dock","dockBar","dock_container","dockContainer","bottomDock"); if(dock!=null) dock.setBackground(createGlassDrawable(col, 28*dens, 55));
-            View fav=findViewGlass("btnAddFav","Fav"); if(fav!=null) fav.setBackground(createGlassDrawable(col, 20*dens, 50));
-            View fol=findViewGlass("btnAddFolder","Folder"); if(fol!=null) fol.setBackground(createGlassDrawable(col, 20*dens, 50));
-            View men=findViewGlass("btnMenu","Menu"); if(men!=null) men.setBackground(createGlassDrawable(col, 20*dens, 50));
-        }catch(Exception e){}
-    }
-
-    class SuggAdapter extends RecyclerView.Adapter<SuggAdapter.H>{
-        class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
-        public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); }
-        public void onBindViewHolder(H h,int pos){ try{ ResolveInfo ri=suggList.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); h.ic.setImageDrawable(ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launch(ri.activityInfo.packageName)); }catch(Exception e){} }
-        public int getItemCount(){ return suggList.size(); }
-    }
 }
