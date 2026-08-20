@@ -36,67 +36,6 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
         setContentView(R.layout.activity_main);
-
-        final View _rootView = findViewById(android.R.id.content);
-        _rootView.postDelayed(new Runnable(){ public void run(){
-            try{
-                TextView clockTv = null;
-                View searchEdit = null;
-                java.util.ArrayDeque<View> q = new java.util.ArrayDeque<>();
-                q.add(_rootView);
-                while(!q.isEmpty()){
-                    View v = q.poll();
-                    if(v instanceof TextView){
-                        TextView tv = (TextView)v;
-                        String s = tv.getText()!=null ? tv.getText().toString() : "";
-                        if(s.contains(":") && s.length()<=5){
-                            if(clockTv==null || tv.getTextSize()>clockTv.getTextSize()) clockTv = tv;
-                        }
-                        if(s.toLowerCase().contains("rechercher")) searchEdit = tv;
-                        if(v.getId()!=-1){
-                            String rid = getResources().getResourceEntryName(v.getId());
-                            if(rid!=null && rid.toLowerCase().contains("search") && v instanceof android.widget.EditText) searchEdit = v;
-                        }
-                    }
-                    if(v instanceof android.widget.EditText){
-                        String h = ((android.widget.EditText)v).getHint()!=null ? ((android.widget.EditText)v).getHint().toString().toLowerCase() : "";
-                        if(h.contains("rechercher")) searchEdit = v;
-                    }
-                    if(v instanceof ViewGroup){
-                        ViewGroup vg = (ViewGroup)v;
-                        for(int i=0;i<vg.getChildCount();i++) q.add(vg.getChildAt(i));
-                    }
-                }
-                if(clockTv!=null && searchEdit!=null){
-                    // remonte jusqu'au conteneur direct sous content
-                    View cur = searchEdit;
-                    View container = cur;
-                    while(cur!=null){
-                        ViewParent p = cur.getParent();
-                        if(p==_rootView || (p instanceof ViewGroup && ((ViewGroup)p).getId()==android.R.id.content)){
-                            container = cur;
-                            break;
-                        }
-                        if(p instanceof View) { container = (View)p; cur = (View)p; }
-                        else break;
-                    }
-                    float dens = getResources().getDisplayMetrics().density;
-                    float targetY = clockTv.getY() + clockTv.getHeight() + 20*dens;
-                    container.setY(targetY);
-                    container.setTranslationY(0);
-                    container.setTranslationX(0);
-                    ViewGroup.LayoutParams lp = container.getLayoutParams();
-                    if(lp instanceof ViewGroup.MarginLayoutParams){
-                        ((ViewGroup.MarginLayoutParams)lp).topMargin = 0;
-                        ((ViewGroup.MarginLayoutParams)lp).bottomMargin = 0;
-                    }
-                    container.setLayoutParams(lp);
-                    container.bringToFront();
-                    container.invalidate();
-                }
-            }catch(Exception e){ android.util.Log.e("QUANTUM", "move fail", e); }
-        }}, 200);
-
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
@@ -140,7 +79,7 @@ public class MainActivity extends Activity {
     GradientDrawable glassBg(int col,float rad,int alpha){ int fill=Color.argb(alpha, Color.red(col), Color.green(col), Color.blue(col)); GradientDrawable d=new GradientDrawable(); d.setShape(0); d.setCornerRadius(rad); d.setColor(fill); d.setStroke((int)(1.2f*getResources().getDisplayMetrics().density), Color.argb(90,255,255,255)); return d; }
     AlertDialog createModernDialog(String title, View content){ float dens=getResources().getDisplayMetrics().density; LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding((int)(20*dens),(int)(20*dens),(int)(20*dens),(int)(16*dens)); root.setBackground(glassBg(glassPrefs.getInt("glass_color",0xFF7C4DFF), 24*dens, 96)); TextView tv=new TextView(this); tv.setText(title); tv.setTextSize(18); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); tv.setPadding(0,0,0,(int)(12*dens)); root.addView(tv); if(content!=null) root.addView(content); AlertDialog dlg=new AlertDialog.Builder(this).setView(root).create(); if(dlg.getWindow()!=null) dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT)); return dlg; }
     void showMenuModern(){ float dens=getResources().getDisplayMetrics().density; LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); String[] opts={"🎨 Couleur thème","🖼️ Fond d'écran","🧹 Effacer fond"}; for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else { prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findV("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); } }); list.addView(row); } AlertDialog dlg=createModernDialog("Quantum Ultra", list); dlg.show(); }
-    void showPaletteModern(){ float dens=getResources().getDisplayMetrics().density; GridLayout grid=new GridLayout(this); grid.setColumnCount(5); int[] cols={0xFF7C4DFF, 0xFF00E5FF, 0xFF00E676, 0xFFFF4081, 0xFF9575CD, 0xFF42A5F5, 0xFF212121, 0xFFFFFFFF, 0xFFF44336, 0xFFE91E63, 0xFF9C27B0, 0xFF673AB7, 0xFF3F51B5, 0xFF2196F3, 0xFF03A9F4, 0xFF00BCD4, 0xFF009688, 0xFF4CAF50, 0xFF8BC34A, 0xFFCDDC39, 0xFFFFEB3B, 0xFFFFC107, 0xFFFF9800, 0xFFFF5722, 0xFF795548, 0xFF9E9E9E, 0xFF607D8B, 0xFFFFD700, 0xFFDC143C, 0xFF40E0D0, 0xFF2ECC71, 0xFF0F52BA, 0xFF9B111E, 0xFFC0C0C0, 0xFF8A2BE2, 0xFF00FF88}; for(int col:cols){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(56*dens); lp.height=(int)(56*dens); lp.setMargins((int)(8*dens),(int)(8*dens),(int)(8*dens),(int)(8*dens)); v.setLayoutParams(lp); GradientDrawable bg=new GradientDrawable(); bg.setCornerRadius(16*dens); bg.setColor(col); if(col==0xFFFFFFFF) bg.setStroke((int)dens,0xFFCCCCCC); v.setBackground(bg); v.setOnClickListener(vw->{ glassPrefs.edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); grid.addView(v); } ScrollView sv=new ScrollView(this); sv.addView(grid); AlertDialog dlg=createModernDialog("Thème Ultra", sv); dlg.show(); }
+    void showPaletteModern(){ float dens=getResources().getDisplayMetrics().density; GridLayout grid=new GridLayout(this); grid.setColumnCount(5); int[] cols={0xFF7C4DFF, 0xFF00E5FF, 0xFF00E676, 0xFFFF4081, 0xFF9575CD, 0xFF42A5F5, 0xFF212121, 0xFFFFFFFF, 0xFFF44336, 0xFFE91E63, 0xFF9C27B0, 0xFF673AB7, 0xFF3F51B5, 0xFF2196F3, 0xFF03A9F4, 0xFF00BCD4, 0xFF009688, 0xFF4CAF50, 0xFF8BC34A, 0xFFCDDC39, 0xFFFFEB3B, 0xFFFFC107, 0xFFFF9800, 0xFFFF5722, 0xFF795548, 0xFF9E9E9E, 0xFF607D8B, 0xFFFFD700, 0xFFDC143C, 0xFF40E0D0, 0xFF2ECC71, 0xFF0F52BA, 0xFF9B111E, 0xFFC0C0C0, 0xFF8A2BE2, 0xFF00FF88}; for(int col:cols){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(56*dens); lp.height=(int)(56*dens); lp.setMargins((int)(8*dens),(int)(8*dens),(int)(8*dens),(int)(8*dens)); v.setLayoutParams(lp); GradientDrawable bg=new GradientDrawable(); bg.setCornerRadius(16*dens); bg.setColor(col); if(col==0xFFFFFFFF) bg.setStroke((int)dens,0xFFCCCCCC); v.setBackground(bg); v.setOnClickListener(vw->{ glassPrefs.edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); grid.addView(v); } AlertDialog dlg=createModernDialog("Thème Ultra", grid); dlg.show(); }
     void pickWallpaper(){ try{ Intent it=new Intent(Intent.ACTION_OPEN_DOCUMENT); it.addCategory(Intent.CATEGORY_OPENABLE); it.setType("image/*"); startActivityForResult(it, 201); }catch(Exception e){ try{ Intent it2=new Intent(Intent.ACTION_PICK); it2.setType("image/*"); startActivityForResult(it2,201); }catch(Exception ee){} } }
     void preloadMax(){ pool.execute(()->{ try{ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it, 0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri); } List<ResolveInfo> dedup=new ArrayList<>(map.values()); Collections.sort(dedup,(a,b)->a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString())); allAppsCache=dedup; for(ResolveInfo ri:dedup){ try{ if(iconCache.get(ri.activityInfo.packageName)==null) iconCache.put(ri.activityInfo.packageName, ri.loadIcon(getPackageManager())); }catch(Exception e){} } mainH.post(()->{ setupDock(); if(rvFav!=null) rvFav.getAdapter().notifyDataSetChanged(); loadWallpaperFast(); }); }catch(Exception e){} }); }
     void filterAppsInstant(String q){ try{ suggList.clear(); if(q==null||q.trim().isEmpty()){ if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter()); return;} String lq=q.toLowerCase().trim(); List<ResolveInfo> src=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache; for(ResolveInfo ri:src){ String label=ri.loadLabel(getPackageManager()).toString().toLowerCase(); if(label.contains(lq) || ri.activityInfo.packageName.toLowerCase().contains(lq)){ suggList.add(ri); if(suggList.size()>=80) break; } } if(rvSugg!=null){ rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.VISIBLE); } }catch(Exception e){} }
