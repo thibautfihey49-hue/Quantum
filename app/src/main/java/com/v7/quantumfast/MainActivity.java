@@ -295,4 +295,33 @@ void saveFolders(){ StringBuilder sb=new StringBuilder(); for(int i=0;i<folders.
     class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.H>{ class H extends RecyclerView.ViewHolder{ TextView name; TextView icon; H(View v){super(v); name=v.findViewById(R.id.favName); icon=v.findViewById(R.id.favIcon);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_fav,p,false)); } public void onBindViewHolder(H h,int pos){ try{ if(pos>=folders.size()) return; Folder f=folders.get(pos); h.name.setText("📁 "+f.name+" ("+f.pkgs.size()+")"); h.icon.setText("📁"); h.itemView.setOnClickListener(v->showFolderContent(f)); h.itemView.setOnLongClickListener(v->{ folders.remove(pos); saveFolders(); notifyDataSetChanged(); return true; }); }catch(Exception e){} } public int getItemCount(){ return folders.size(); } }
     class FastAdapter extends RecyclerView.Adapter<FastAdapter.H>{ List<ResolveInfo> list; PackageManager pm; android.app.Dialog dlg; FastAdapter(List<ResolveInfo> l,PackageManager p,android.app.Dialog d){list=l;pm=p;dlg=d;} class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup pa,int t){ View v=getLayoutInflater().inflate(R.layout.item_app,pa,false); return new H(v); } public void onBindViewHolder(H h,int pos){ try{ if(pos>=list.size()) return; ResolveInfo ri=list.get(pos); String lbl=labelCache.get(ri.activityInfo.packageName); if(lbl!=null) h.lb.setText(lbl); Drawable cd=iconCache.get(ri.activityInfo.packageName); if(cd!=null) h.ic.setImageDrawable(cd); else { h.ic.setImageResource(android.R.drawable.sym_def_app_icon); exec.execute(()->{ try{ Drawable dd=pm.getApplicationIcon(ri.activityInfo.packageName); iconCache.put(ri.activityInfo.packageName,dd); main.post(()->{ if(h.getBindingAdapterPosition()==pos) h.ic.setImageDrawable(dd); }); }catch(Exception e){} }); } h.itemView.setOnClickListener(v->{ if(!tap()) return; try{ launch(ri.activityInfo.packageName); dlg.dismiss();}catch(Exception e){}}); }catch(Exception e){} } public int getItemCount(){ return list.size(); } }
     public static class AdminReceiver extends android.app.admin.DeviceAdminReceiver {}
+
+    androidx.recyclerview.widget.RecyclerView.RecycledViewPool sharedPool = QuantumApp.sharedPool;
+    void boostAllApps(){
+        try{
+            getWindow().setBackgroundDrawable(null);
+            if(wallpaperView!=null && QuantumApp.wallpaperCache!=null) wallpaperView.setImageDrawable(QuantumApp.wallpaperCache);
+            try{
+                rvFolders.setRecycledViewPool(sharedPool);
+                rvFolders.setItemViewCacheSize(1000);
+                rvFolders.setHasFixedSize(true);
+                rvFolders.setItemAnimator(null);
+                rvFolders.setLayerType(android.view.View.LAYER_TYPE_HARDWARE,null);
+                rvFolders.setOverScrollMode(android.view.View.OVER_SCROLL_NEVER);
+                ((androidx.recyclerview.widget.LinearLayoutManager)rvFolders.getLayoutManager()).setInitialPrefetchItemCount(1000);
+            }catch(Exception e){}
+            try{
+                rvSuggestions.setRecycledViewPool(sharedPool);
+                rvSuggestions.setItemViewCacheSize(1000);
+                rvSuggestions.setHasFixedSize(true);
+                rvSuggestions.setItemAnimator(null);
+                rvSuggestions.setLayerType(android.view.View.LAYER_TYPE_HARDWARE,null);
+                rvSuggestions.setOverScrollMode(android.view.View.OVER_SCROLL_NEVER);
+                ((androidx.recyclerview.widget.LinearLayoutManager)rvSuggestions.getLayoutManager()).setInitialPrefetchItemCount(1000);
+            }catch(Exception e){}
+            android.os.Process.setThreadPriority(-20);
+        }catch(Exception e){}
+        QuantumApp.boot();
+    }
+
 }
