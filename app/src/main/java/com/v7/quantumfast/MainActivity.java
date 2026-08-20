@@ -42,19 +42,24 @@ public class MainActivity extends Activity {
         searchApps=findViewById(R.id.searchAppsMain);
         searchWeb=findViewById(R.id.searchWebMain);
         rvSugg=findViewById(R.id.rvSuggestions);
-        if(rvSugg==null) rvSugg=(RecyclerView)findViewGlass("rvSugg","suggestions");
-        rvFav=(RecyclerView)findViewGlass("rvFavorites","rvFav","favs","favorites","gridFav");
+        rvFav=findViewById(R.id.rvFavorites);
+        if(rvFav==null) rvFav=(RecyclerView)findViewById(R.id.rvFav);
 
-        if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setHasFixedSize(true); rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.GONE); }
-        if(rvFav!=null){ rvFav.setLayoutManager(new GridLayoutManager(this,5)); rvFav.setHasFixedSize(true); }
+        if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setVisibility(View.GONE); rvSugg.setAdapter(new SuggAdapter()); }
+        if(rvFav!=null){ rvFav.setLayoutManager(new GridLayoutManager(this,5)); rvFav.setVisibility(View.VISIBLE); }
 
-        hideSystemBubblesAndFolders();
+        // cache SEULEMENT les vues parasites, pas de récursif
+        try{
+            for(String idName:new String[]{"btnBoost","Google","YouTube","gCard","yCard","folderZone","rvFolders","folders","btnAddFolder"}){
+                int id=getResources().getIdentifier(idName,"id",getPackageName());
+                if(id!=0){ View v=findViewById(id); if(v!=null) v.setVisibility(View.GONE); }
+            }
+        }catch(Exception e){}
 
-        View cl=findViewGlass("clearApps","btnClear","clear"); if(cl!=null) cl.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); });
-        View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setOnClickListener(v->handleWeb());
-        if(searchWeb!=null) searchWeb.setOnEditorActionListener((v,id,ev)->{ if(id==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){ handleWeb(); return true;} return false; });
-        View fav=findViewGlass("btnAddFav","Fav","fav"); if(fav!=null) fav.setOnClickListener(v->showAddFavDialog());
-        View men=findViewGlass("btnMenu","Menu","menu"); if(men!=null) men.setOnClickListener(v->showMenuModern());
+        View cl=findViewById(R.id.clearApps); if(cl!=null) cl.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); });
+        View go=findViewById(R.id.btnWebGo); if(go==null) go=findViewById(R.id.go); if(go!=null) go.setOnClickListener(v->handleWeb());
+        View favBtn=findViewById(R.id.btnAddFav); if(favBtn==null) favBtn=findViewById(R.id.Fav); if(favBtn!=null) favBtn.setOnClickListener(v->showAddFavDialog());
+        View men=findViewById(R.id.btnMenu); if(men==null) men=findViewById(R.id.Menu); if(men!=null) men.setOnClickListener(v->showMenuModern());
 
         loadFavs();
         if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
@@ -74,27 +79,6 @@ public class MainActivity extends Activity {
         });
 
         checkAndAskPermissions();
-        mainRoot.postDelayed(this::checkDefaultLauncher, 800);
-    }
-
-    void hideSystemBubblesAndFolders(){
-        try{
-            String[] hideNames={"Google","YouTube","btnBoost","Boost","boost","gCard","yCard","cardGoogle","cardYoutube","G","Y","A-","btnGoogle","btnYouTube","folderZone","containerFolders","rvFolders","folders","btnAddFolder","Folder","folder"};
-            for(String n:hideNames){ View v=findViewGlass(n); if(v!=null){ v.setVisibility(View.GONE); View p=(View)v.getParent(); if(p!=null && p!=mainRoot) try{ if(p.getId()!=R.id.root) p.setVisibility(View.GONE); }catch(Exception e){} } }
-            ViewGroup root=(ViewGroup)mainRoot; if(root!=null) hideByTextRecursive(root);
-        }catch(Exception e){}
-    }
-    void hideByTextRecursive(ViewGroup vg){
-        for(int i=0;i<vg.getChildCount();i++){
-            View v=vg.getChildAt(i);
-            if(v instanceof TextView){
-                String t=((TextView)v).getText().toString().trim();
-                if(t.equalsIgnoreCase("Google")||t.equalsIgnoreCase("YouTube")||t.equalsIgnoreCase("Boost")||t.equals("A-")||t.equalsIgnoreCase("papa")||t.equalsIgnoreCase("Folder")){
-                    View parent=(View)v.getParent(); if(parent!=null && parent!=mainRoot) parent.setVisibility(View.GONE); v.setVisibility(View.GONE);
-                }
-            }
-            if(v instanceof ViewGroup && v!=rvSugg && v!=rvFav) hideByTextRecursive((ViewGroup)v);
-        }
     }
 
     Drawable glassBg(int col,float rad,int alpha){ int fill=Color.argb(alpha, Color.red(col), Color.green(col), Color.blue(col)); android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable(); d.setShape(0); d.setCornerRadius(rad); d.setColor(fill); d.setStroke((int)(1.2f*getResources().getDisplayMetrics().density), Color.argb(110,255,255,255)); return d; }
@@ -105,15 +89,14 @@ public class MainActivity extends Activity {
         TextView tv=new TextView(this); tv.setText(title); tv.setTextSize(18); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); tv.setPadding(0,0,0,(int)(12*dens)); root.addView(tv);
         if(content!=null) root.addView(content);
         AlertDialog dlg=new AlertDialog.Builder(this).setView(root).create();
-        if(dlg.getWindow()!=null){ dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT)); }
+        if(dlg.getWindow()!=null) dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         return dlg;
     }
-
     void showMenuModern(){
         float dens=getResources().getDisplayMetrics().density;
         LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
-        String[] opts={"🎨 Couleur thème","🖼️ Choisir fond d'écran","🧹 Effacer fond"};
-        for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==2){ prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findViewGlass("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); Toast.makeText(this,"Fond effacé",0).show(); } }); list.addView(row); }
+        String[] opts={"🎨 Couleur","🖼️ Fond d'écran","🧹 Effacer fond"};
+        for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else { prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findViewById(R.id.wallpaper); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); } }); list.addView(row); }
         AlertDialog dlg=createModernDialog("Menu", list); dlg.show();
     }
     void showPaletteModern(){
@@ -131,11 +114,11 @@ public class MainActivity extends Activity {
                 Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER);
                 List<ResolveInfo> all=getPackageManager().queryIntentActivities(it, 0);
                 LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>();
-                for(ResolveInfo ri:all){ String pkg=ri.activityInfo.packageName; if(!map.containsKey(pkg)) map.put(pkg,ri); }
+                for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri); }
                 List<ResolveInfo> dedup=new ArrayList<>(map.values());
                 Collections.sort(dedup,(a,b)->a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString()));
                 allAppsCache=dedup;
-                for(ResolveInfo ri:dedup){ try{ String pkg=ri.activityInfo.packageName; if(iconCache.get(pkg)==null) iconCache.put(pkg, ri.loadIcon(getPackageManager())); }catch(Exception e){} }
+                for(ResolveInfo ri:dedup){ try{ if(iconCache.get(ri.activityInfo.packageName)==null) iconCache.put(ri.activityInfo.packageName, ri.loadIcon(getPackageManager())); }catch(Exception e){} }
                 mainH.post(()->{ setupDock(); if(rvFav!=null) rvFav.getAdapter().notifyDataSetChanged(); loadWallpaperFast(); });
             }catch(Exception e){}
         });
@@ -146,20 +129,10 @@ public class MainActivity extends Activity {
             suggList.clear();
             if(q==null||q.trim().isEmpty()){ if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter()); return;}
             String lq=q.toLowerCase().trim();
-            List<ResolveInfo> src=allAppsCache;
-            if(src.isEmpty()){
-                Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER);
-                List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0);
-                LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>();
-                for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri); }
-                src=new ArrayList<>(map.values());
-                allAppsCache=src;
-            }
+            List<ResolveInfo> src=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache;
             for(ResolveInfo ri:src){
                 String label=ri.loadLabel(getPackageManager()).toString().toLowerCase();
-                String pkg=ri.activityInfo.packageName.toLowerCase();
-                if(label.contains(lq) || pkg.contains(lq)){ suggList.add(ri); }
-                if(suggList.size()>=100) break;
+                if(label.contains(lq) || ri.activityInfo.packageName.toLowerCase().contains(lq)){ suggList.add(ri); if(suggList.size()>=80) break; }
             }
             if(rvSugg!=null){ rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.VISIBLE); }
         }catch(Exception e){}
@@ -170,7 +143,7 @@ public class MainActivity extends Activity {
             List<ResolveInfo> tmp=allAppsCache;
             if(tmp.isEmpty()){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);} tmp=new ArrayList<>(map.values()); }
             final List<ResolveInfo> src=tmp;
-            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(12,12,12,12); rv.setHasFixedSize(true);
+            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(12,12,12,12);
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
                 public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(10); lb.setTextColor(Color.WHITE); } return new H(vv); }
@@ -181,15 +154,11 @@ public class MainActivity extends Activity {
         }catch(Exception e){}
     }
 
-    boolean isMyLauncherDefault(){ try{ Intent i=new Intent(Intent.ACTION_MAIN); i.addCategory(Intent.CATEGORY_HOME); ResolveInfo r=getPackageManager().resolveActivity(i, PackageManager.MATCH_DEFAULT_ONLY); return r!=null && r.activityInfo.packageName.equals(getPackageName()); }catch(Exception e){ return false; } }
-    void checkDefaultLauncher(){ if(isMyLauncherDefault()) return; if(prefs.getBoolean("asked_default",false)) return; AlertDialog dlg=createModernDialog("Launcher par défaut", null); dlg.setButton(AlertDialog.BUTTON_POSITIVE,"Oui",(DialogInterface d,int w)->{ prefs.edit().putBoolean("asked_default",true).apply(); try{ startActivity(new Intent(Settings.ACTION_HOME_SETTINGS)); }catch(Exception e){} }); dlg.setButton(AlertDialog.BUTTON_NEGATIVE,"Plus tard",(d,w)->{}); dlg.show(); }
-    void checkAndAskPermissions(){ try{ if(Build.VERSION.SDK_INT>=33){ if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_MEDIA_IMAGES)!=PackageManager.PERMISSION_GRANTED) ActivityCompat.requestPermissions(this,new String[]{android.Manifest.permission.READ_MEDIA_IMAGES},101); }else{ if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE)!=PackageManager.PERMISSION_GRANTED) ActivityCompat.requestPermissions(this,new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE},101); } }catch(Exception e){} }
-
     View findViewGlass(String...names){ for(String n:names){ int id=getResources().getIdentifier(n,"id",getPackageName()); if(id!=0){ View v=findViewById(id); if(v!=null) return v; } } return null; }
-    void loadWallpaperFast(){ try{ String s=prefs.getString("custom_wallpaper_uri",""); if(s.isEmpty()) return; Uri uri=Uri.parse(s); View bg=findViewGlass("wallpaper","bg","background","wall","wallpaperView"); if(bg instanceof ImageView){ ((ImageView)bg).setScaleType(ImageView.ScaleType.CENTER_CROP); ((ImageView)bg).setImageURI(uri); } }catch(Exception e){} }
+    void loadWallpaperFast(){ try{ String s=prefs.getString("custom_wallpaper_uri",""); if(s.isEmpty()) return; Uri uri=Uri.parse(s); View bg=findViewById(R.id.wallpaper); if(bg==null) bg=findViewById(R.id.bg); if(bg instanceof ImageView){ ((ImageView)bg).setScaleType(ImageView.ScaleType.CENTER_CROP); ((ImageView)bg).setImageURI(uri); } }catch(Exception e){} }
     @Override protected void onActivityResult(int rc,int res,Intent data){ if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri u=data.getData(); try{ getContentResolver().takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri",u.toString()).apply(); loadWallpaperFast(); } }
 
-    void setupAtAGlance(){ TextView c=(TextView)findViewGlass("clock","time"); TextView d=(TextView)findViewGlass("date","dateInfo"); SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE); SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE); Runnable r=new Runnable(){public void run(){ try{ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); }catch(Exception e){} if(mainRoot!=null) mainRoot.postDelayed(this,30000); }}; r.run(); }
+    void setupAtAGlance(){ TextView c=(TextView)findViewById(R.id.clock); if(c==null) c=(TextView)findViewById(R.id.time); TextView d=(TextView)findViewById(R.id.dateInfo); if(d==null) d=(TextView)findViewById(R.id.date); SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE); SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE); Runnable r=new Runnable(){public void run(){ try{ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); }catch(Exception e){} if(mainRoot!=null) mainRoot.postDelayed(this,30000); }}; r.run(); }
 
     String resolveIntentPkg(Intent intent){ try{ List<ResolveInfo> r=getPackageManager().queryIntentActivities(intent,0); if(r!=null&&!r.isEmpty()) return r.get(0).activityInfo.packageName; }catch(Exception e){} return null; }
     String getSmartDefault(int idx){ try{ if(idx==0){ String p=resolveIntentPkg(new Intent(Intent.ACTION_DIAL)); if(p!=null) return p;} if(idx==1){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("sms:"))); if(p!=null) return p;} if(idx==2) return "com.android.settings"; if(idx==4){ String p=resolveIntentPkg(new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)); if(p!=null) return p;} if(idx==5){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("http://google.com"))); if(p!=null) return p;} }catch(Exception e){} return defaultPkgs[idx]; }
@@ -204,7 +173,7 @@ public class MainActivity extends Activity {
     }
     String findRealPkg(String pkg){ if(pkg==null) return null; try{ getPackageManager().getPackageInfo(pkg,0); return pkg; }catch(Exception e){ return null; } }
     void updateDockIcon(ImageView iv, String pkg){ try{ Drawable c=iconCache.get(pkg); if(c!=null) iv.setImageDrawable(c); else iv.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); iv.setBackgroundColor(Color.TRANSPARENT);}catch(Exception e){ iv.setImageResource(android.R.drawable.sym_def_app_icon); } }
-    void launchInstant(String pkg){ try{ Intent ii=getPackageManager().getLaunchIntentForPackage(pkg); if(ii!=null){ ii.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_NO_ANIMATION); clearSearchNow(); startActivity(ii); overridePendingTransition(0,0); return; } }catch(Exception e){} }
+    void launchInstant(String pkg){ try{ Intent ii=getPackageManager().getLaunchIntentForPackage(pkg); if(ii!=null){ ii.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_NO_ANIMATION); clearSearchNow(); startActivity(ii); overridePendingTransition(0,0); } }catch(Exception e){} }
     void clearSearchNow(){ if(searchApps!=null) searchApps.setText(""); suggList.clear(); if(rvSugg!=null){ rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.GONE); } if(rvFav!=null) rvFav.setVisibility(View.VISIBLE); }
 
     void pickDockApp(int idx){
@@ -213,9 +182,9 @@ public class MainActivity extends Activity {
         List<ResolveInfo> uniq=new ArrayList<>(map.values());
         RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new LinearLayoutManager(this));
         rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
-            class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; TextView sub; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label); sub=new TextView(v.getContext()); sub.setTextSize(10); sub.setTextColor(0x99FFFFFF); ((ViewGroup)v).addView(sub);} }
+            class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
             public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); }
-            public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=uniq.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); h.sub.setText(ri.activityInfo.packageName); Drawable cd=iconCache.get(ri.activityInfo.packageName); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->{ prefs.edit().putString(dockKeys[idx],ri.activityInfo.packageName).apply(); setupDock(); }); }
+            public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=uniq.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(ri.activityInfo.packageName); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->{ prefs.edit().putString(dockKeys[idx],ri.activityInfo.packageName).apply(); setupDock(); }); }
             public int getItemCount(){ return uniq.size(); }
         });
         AlertDialog dlg=createModernDialog("Choisir app dock", rv); dlg.show();
@@ -229,39 +198,25 @@ public class MainActivity extends Activity {
             List<ResolveInfo> tmp=allAppsCache;
             if(tmp.isEmpty()){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);} tmp=new ArrayList<>(map.values()); }
             final List<ResolveInfo> src=tmp;
-            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(12,12,12,12); rv.setHasFixedSize(true);
-            AlertDialog dlg=createModernDialog("Choisir apps 5x5 ("+favPkgs.size()+"/25)", rv);
+            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(12,12,12,12);
+            AlertDialog dlg=createModernDialog("Grille 5x5 - "+favPkgs.size()+"/25", rv);
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
-                class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; View check; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label); check=new View(v.getContext()); check.setBackgroundColor(Color.GREEN); check.setVisibility(View.GONE); ((ViewGroup)v).addView(check); } }
+                class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
                 public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(9); lb.setTextColor(Color.WHITE); } return new H(vv); }
-                public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=src.get(pos); String pkg=ri.activityInfo.packageName; h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(pkg); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); boolean added=favPkgs.contains(pkg); h.itemView.setAlpha(added?0.4f:1f);
-                    h.itemView.setOnClickListener(v->{
-                        if(favPkgs.contains(pkg)){ favPkgs.remove(pkg); Toast.makeText(MainActivity.this,"Retiré",0).show(); }
-                        else{ if(favPkgs.size()>=25){ Toast.makeText(MainActivity.this,"Max 25 apps (5x5)",0).show(); return; } favPkgs.add(pkg); }
-                        saveFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter()); notifyDataSetChanged();
-                    });
-                }
+                public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=src.get(pos); String pkg=ri.activityInfo.packageName; h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(pkg); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); boolean added=favPkgs.contains(pkg); h.itemView.setAlpha(added?0.35f:1f);
+                    h.itemView.setOnClickListener(v->{ if(favPkgs.contains(pkg)) favPkgs.remove(pkg); else { if(favPkgs.size()>=25){ Toast.makeText(MainActivity.this,"Max 25",0).show(); return; } favPkgs.add(pkg); } saveFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter()); notifyDataSetChanged(); }); }
                 public int getItemCount(){ return src.size(); }
             });
             dlg.show();
         }catch(Exception e){}
     }
 
-    void handleWeb(){ if(searchWeb==null) return; String q=searchWeb.getText().toString().trim(); if(q.isEmpty()) return; String low=q.toLowerCase(); String url; if(low.startsWith("yt ")) url="https://www.youtube.com/results?search_query="+Uri.encode(q.substring(3)); else if(low.startsWith("g ")) url="https://www.google.com/search?q="+Uri.encode(q.substring(2)); else if(q.contains(" ")) url="https://www.google.com/search?q="+Uri.encode(q); else if(q.contains(".")) url=q.startsWith("http")?q:"https://"+q; else url="https://www.google.com/search?q="+Uri.encode(q); try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }catch(Exception e){ Toast.makeText(this,q,0).show(); } }
-
-    void applyGlassTheme(int col){
-        try{
-            float dens=getResources().getDisplayMetrics().density;
-            double lum=(0.299*Color.red(col)+0.587*Color.green(col)+0.114*Color.blue(col))/255;
-            int textCol= lum>0.6? 0xFF1A1A1A : 0xFFFFFFFF; int hintCol= lum>0.6? 0x661A1A1A : 0xBBFFFFFF;
-            for(int id:new int[]{R.id.searchAppsMain,R.id.searchWebMain}){
-                View v=findViewById(id); if(v!=null){ v.setBackground(glassBg(col, 28*dens, 92)); if(v instanceof EditText){ ((EditText)v).setTextColor(textCol); ((EditText)v).setHintTextColor(hintCol);} }
-            }
-            View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setBackground(glassBg(col, 28*dens, 92));
-            View dock=findViewGlass("dock","dockBar","dock_container","dockContainer","bottomDock"); if(dock!=null) dock.setBackground(glassBg(col, 26*dens, 68));
-        }catch(Exception e){}
-    }
+    void handleWeb(){ if(searchWeb==null) return; String q=searchWeb.getText().toString().trim(); if(q.isEmpty()) return; String url=q.contains(" ")?"https://www.google.com/search?q="+Uri.encode(q):q.startsWith("http")?q:"https://"+q; try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }catch(Exception e){} }
+    void applyGlassTheme(int col){ try{ float dens=getResources().getDisplayMetrics().density; for(int id:new int[]{R.id.searchAppsMain,R.id.searchWebMain}){ View v=findViewById(id); if(v!=null) v.setBackground(glassBg(col, 28*dens, 92)); } View dock=findViewById(R.id.dock); if(dock==null) dock=findViewById(R.id.dockBar); if(dock!=null) dock.setBackground(glassBg(col, 26*dens, 68)); }catch(Exception e){} }
+    void checkAndAskPermissions(){ try{ if(Build.VERSION.SDK_INT>=33){ if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_MEDIA_IMAGES)!=PackageManager.PERMISSION_GRANTED) ActivityCompat.requestPermissions(this,new String[]{android.Manifest.permission.READ_MEDIA_IMAGES},101); } }catch(Exception e){} }
+    boolean isMyLauncherDefault(){ try{ Intent i=new Intent(Intent.ACTION_MAIN); i.addCategory(Intent.CATEGORY_HOME); ResolveInfo r=getPackageManager().resolveActivity(i, PackageManager.MATCH_DEFAULT_ONLY); return r!=null && r.activityInfo.packageName.equals(getPackageName()); }catch(Exception e){ return false; } }
+    void checkDefaultLauncher(){}
 
     class SuggAdapter extends RecyclerView.Adapter<SuggAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ ResolveInfo ri=suggList.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(ri.activityInfo.packageName); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launchInstant(ri.activityInfo.packageName)); }catch(Exception e){} } public int getItemCount(){ return suggList.size(); } }
-    class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(10); lb.setTextColor(Color.WHITE); } return new H(vv); } public void onBindViewHolder(H h,int pos){ try{ String pkg=favPkgs.get(pos); ResolveInfo ri=null; for(ResolveInfo r:allAppsCache){ if(r.activityInfo.packageName.equals(pkg)){ ri=r; break; } } if(ri!=null) h.lb.setText(ri.loadLabel(getPackageManager())); else h.lb.setText(pkg); Drawable cd=iconCache.get(pkg); if(cd!=null) h.ic.setImageDrawable(cd); else try{ h.ic.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); }catch(Exception e){} h.itemView.setOnClickListener(v->launchInstant(pkg)); h.itemView.setOnLongClickListener(v->{ favPkgs.remove(pos); saveFavs(); notifyDataSetChanged(); return true; }); }catch(Exception e){} } public int getItemCount(){ return favPkgs.size(); } }
+    class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(10); lb.setTextColor(Color.WHITE); } return new H(vv); } public void onBindViewHolder(H h,int pos){ try{ String pkg=favPkgs.get(pos); ResolveInfo ri=null; for(ResolveInfo r:allAppsCache){ if(r.activityInfo.packageName.equals(pkg)){ ri=r; break; } } if(ri!=null) h.lb.setText(ri.loadLabel(getPackageManager())); else h.lb.setText(pkg); Drawable cd=iconCache.get(pkg); if(cd!=null) h.ic.setImageDrawable(cd); else h.ic.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launchInstant(pkg)); h.itemView.setOnLongClickListener(v->{ favPkgs.remove(pos); saveFavs(); notifyDataSetChanged(); return true; }); }catch(Exception e){} } public int getItemCount(){ return favPkgs.size(); } }
 }
