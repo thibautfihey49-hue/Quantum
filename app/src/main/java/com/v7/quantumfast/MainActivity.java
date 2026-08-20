@@ -5,6 +5,7 @@ import android.content.pm.*;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.*;
 import android.provider.Settings;
