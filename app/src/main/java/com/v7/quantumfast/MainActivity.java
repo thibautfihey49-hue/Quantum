@@ -5,12 +5,12 @@ import android.content.pm.*;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.widget.*;
-import androidx.appcompat.app.AppCompatActivity;
+import android.app.Activity;
 import androidx.recyclerview.widget.RecyclerView;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
     RecyclerView rvSugg, rvFav, rvFolders;
     EditText searchApps, searchWeb;
     SharedPreferences prefs;
