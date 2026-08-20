@@ -40,7 +40,7 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
     <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingBottom="72dp">
-        <LinearLayout android:id="@+id/dock" android:orientation="horizontal" android:gravity="center" android:background="@drawable/glass_dock" android:padding="10dp" android:layout_width="match_parent" android:layout_height="78dp">
+        <LinearLayout android:id="@+id/dock" android:orientation="horizontal" android:gravity="center" android:background="@drawable/glass_dock" android:padding="10dp" android:layout_width="match_parent" android:layout_height="148dp">
             <ImageView android:id="@+id/dPhone" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
             <ImageView android:id="@+id/dMsg" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
             <ImageView android:id="@+id/dExtra" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
