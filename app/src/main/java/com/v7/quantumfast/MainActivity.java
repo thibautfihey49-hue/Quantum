@@ -20,18 +20,16 @@ import java.util.concurrent.*;
 public class MainActivity extends Activity {
     View mainRoot;
     EditText searchApps, searchWeb;
-    RecyclerView rvSugg, rvFav, rvFolders;
+    RecyclerView rvSugg, rvFav;
     SharedPreferences prefs, glassPrefs;
     List<ResolveInfo> suggList=new ArrayList<>();
     List<ResolveInfo> allAppsCache=new ArrayList<>();
     LruCache<String, Drawable> iconCache=new LruCache<>(200);
     List<String> favPkgs=new ArrayList<>();
-    List<Folder> folders=new ArrayList<>();
     ExecutorService pool=Executors.newFixedThreadPool(2);
     Handler mainH=new Handler(Looper.getMainLooper());
     String[] dockKeys={"dock_phone","dock_msg","dock_extra","dock_drawer","dock_cam","dock_chrome"};
     String[] defaultPkgs={"com.android.dialer","com.google.android.apps.messaging","com.android.settings","com.v7.quantumfast","com.android.camera2","com.android.chrome"};
-    static class Folder{ String name; List<String> pkgs=new ArrayList<>(); Folder(String n){name=n;} }
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
@@ -44,26 +42,22 @@ public class MainActivity extends Activity {
         searchApps=findViewById(R.id.searchAppsMain);
         searchWeb=findViewById(R.id.searchWebMain);
         rvSugg=findViewById(R.id.rvSuggestions);
-        if(rvSugg==null) rvSugg=(RecyclerView)findViewGlass("rvSugg","suggestions","searchResults");
-        rvFav=(RecyclerView)findViewGlass("rvFavorites","rvFav","favs","favorites");
-        rvFolders=(RecyclerView)findViewGlass("rvFolders","folders","folderZone");
+        if(rvSugg==null) rvSugg=(RecyclerView)findViewGlass("rvSugg","suggestions");
+        rvFav=(RecyclerView)findViewGlass("rvFavorites","rvFav","favs","favorites","gridFav");
 
-        if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setHasFixedSize(true); rvSugg.setItemViewCacheSize(30); rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.GONE); }
-        if(rvFav!=null){ rvFav.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL,false)); rvFav.setHasFixedSize(true); }
-        if(rvFolders!=null){ rvFolders.setLayoutManager(new GridLayoutManager(this,4)); rvFolders.setHasFixedSize(true); }
+        if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setHasFixedSize(true); rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.GONE); }
+        if(rvFav!=null){ rvFav.setLayoutManager(new GridLayoutManager(this,5)); rvFav.setHasFixedSize(true); }
 
-        hideSystemBubbles();
+        hideSystemBubblesAndFolders();
 
         View cl=findViewGlass("clearApps","btnClear","clear"); if(cl!=null) cl.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); });
         View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setOnClickListener(v->handleWeb());
         if(searchWeb!=null) searchWeb.setOnEditorActionListener((v,id,ev)->{ if(id==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){ handleWeb(); return true;} return false; });
         View fav=findViewGlass("btnAddFav","Fav","fav"); if(fav!=null) fav.setOnClickListener(v->showAddFavDialog());
-        View fol=findViewGlass("btnAddFolder","Folder","folder"); if(fol!=null) fol.setOnClickListener(v->showCreateFolderDialog());
         View men=findViewGlass("btnMenu","Menu","menu"); if(men!=null) men.setOnClickListener(v->showMenuModern());
 
-        loadFavs(); loadFolders();
+        loadFavs();
         if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
-        if(rvFolders!=null) rvFolders.setAdapter(new FolderAdapter());
 
         setupAtAGlance(); preloadMax(); setupDock();
         applyGlassTheme(glassPrefs.getInt("glass_color",0xFF6B4C8A));
@@ -72,7 +66,6 @@ public class MainActivity extends Activity {
             public void beforeTextChanged(CharSequence s,int a,int b,int c){}
             public void onTextChanged(CharSequence s,int a,int b,int c){
                 String q=s.toString(); boolean typing=!q.trim().isEmpty();
-                if(rvFolders!=null) rvFolders.setVisibility(typing?View.GONE:View.VISIBLE);
                 if(rvFav!=null) rvFav.setVisibility(typing?View.GONE:View.VISIBLE);
                 if(rvSugg!=null) rvSugg.setVisibility(typing?View.VISIBLE:View.GONE);
                 filterAppsInstant(q);
@@ -84,10 +77,10 @@ public class MainActivity extends Activity {
         mainRoot.postDelayed(this::checkDefaultLauncher, 800);
     }
 
-    void hideSystemBubbles(){
+    void hideSystemBubblesAndFolders(){
         try{
-            String[] hideNames={"Google","YouTube","btnBoost","Boost","boost","gCard","yCard","cardGoogle","cardYoutube","G","Y","A-","btnGoogle","btnYouTube"};
-            for(String n:hideNames){ View v=findViewGlass(n); if(v!=null){ v.setVisibility(View.GONE); View p=(View)v.getParent(); if(p!=null && p!=mainRoot) { try{ if(p.getId()!=R.id.root) p.setVisibility(View.GONE); }catch(Exception e){} } } }
+            String[] hideNames={"Google","YouTube","btnBoost","Boost","boost","gCard","yCard","cardGoogle","cardYoutube","G","Y","A-","btnGoogle","btnYouTube","folderZone","containerFolders","rvFolders","folders","btnAddFolder","Folder","folder"};
+            for(String n:hideNames){ View v=findViewGlass(n); if(v!=null){ v.setVisibility(View.GONE); View p=(View)v.getParent(); if(p!=null && p!=mainRoot) try{ if(p.getId()!=R.id.root) p.setVisibility(View.GONE); }catch(Exception e){} } }
             ViewGroup root=(ViewGroup)mainRoot; if(root!=null) hideByTextRecursive(root);
         }catch(Exception e){}
     }
@@ -96,13 +89,11 @@ public class MainActivity extends Activity {
             View v=vg.getChildAt(i);
             if(v instanceof TextView){
                 String t=((TextView)v).getText().toString().trim();
-                if(t.equalsIgnoreCase("Google")||t.equalsIgnoreCase("YouTube")||t.equalsIgnoreCase("Boost")||t.equals("A-")||t.equalsIgnoreCase("papa")){
-                    View parent=(View)v.getParent();
-                    if(parent!=null && parent!=mainRoot) parent.setVisibility(View.GONE);
-                    v.setVisibility(View.GONE);
+                if(t.equalsIgnoreCase("Google")||t.equalsIgnoreCase("YouTube")||t.equalsIgnoreCase("Boost")||t.equals("A-")||t.equalsIgnoreCase("papa")||t.equalsIgnoreCase("Folder")){
+                    View parent=(View)v.getParent(); if(parent!=null && parent!=mainRoot) parent.setVisibility(View.GONE); v.setVisibility(View.GONE);
                 }
             }
-            if(v instanceof ViewGroup && v!=rvSugg && v!=rvFav && v!=rvFolders) hideByTextRecursive((ViewGroup)v);
+            if(v instanceof ViewGroup && v!=rvSugg && v!=rvFav) hideByTextRecursive((ViewGroup)v);
         }
     }
 
@@ -121,7 +112,7 @@ public class MainActivity extends Activity {
     void showMenuModern(){
         float dens=getResources().getDisplayMetrics().density;
         LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
-        String[] opts={"🎨 Couleur thème","🖼️ Choisir fond d'écran","🧹 Effacer fond","ℹ️ À propos"};
+        String[] opts={"🎨 Couleur thème","🖼️ Choisir fond d'écran","🧹 Effacer fond"};
         for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==2){ prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findViewGlass("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); Toast.makeText(this,"Fond effacé",0).show(); } }); list.addView(row); }
         AlertDialog dlg=createModernDialog("Menu", list); dlg.show();
     }
@@ -145,7 +136,7 @@ public class MainActivity extends Activity {
                 Collections.sort(dedup,(a,b)->a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString()));
                 allAppsCache=dedup;
                 for(ResolveInfo ri:dedup){ try{ String pkg=ri.activityInfo.packageName; if(iconCache.get(pkg)==null) iconCache.put(pkg, ri.loadIcon(getPackageManager())); }catch(Exception e){} }
-                mainH.post(()->{ setupDock(); if(rvFav!=null) rvFav.getAdapter().notifyDataSetChanged(); if(rvFolders!=null) rvFolders.getAdapter().notifyDataSetChanged(); loadWallpaperFast(); });
+                mainH.post(()->{ setupDock(); if(rvFav!=null) rvFav.getAdapter().notifyDataSetChanged(); loadWallpaperFast(); });
             }catch(Exception e){}
         });
     }
@@ -176,12 +167,13 @@ public class MainActivity extends Activity {
 
     void openFullDrawer(){
         try{
-            List<ResolveInfo> src=allAppsCache;
-            if(src.isEmpty()){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);} src=new ArrayList<>(map.values()); }
-            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,4)); rv.setPadding(12,12,12,12); rv.setHasFixedSize(true);
+            List<ResolveInfo> tmp=allAppsCache;
+            if(tmp.isEmpty()){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);} tmp=new ArrayList<>(map.values()); }
+            final List<ResolveInfo> src=tmp;
+            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(12,12,12,12); rv.setHasFixedSize(true);
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
-                public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(11); lb.setTextColor(Color.WHITE); } return new H(vv); }
+                public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(10); lb.setTextColor(Color.WHITE); } return new H(vv); }
                 public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=src.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(ri.activityInfo.packageName); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->{ launchInstant(ri.activityInfo.packageName); }); }
                 public int getItemCount(){ return src.size(); }
             });
@@ -213,7 +205,7 @@ public class MainActivity extends Activity {
     String findRealPkg(String pkg){ if(pkg==null) return null; try{ getPackageManager().getPackageInfo(pkg,0); return pkg; }catch(Exception e){ return null; } }
     void updateDockIcon(ImageView iv, String pkg){ try{ Drawable c=iconCache.get(pkg); if(c!=null) iv.setImageDrawable(c); else iv.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); iv.setBackgroundColor(Color.TRANSPARENT);}catch(Exception e){ iv.setImageResource(android.R.drawable.sym_def_app_icon); } }
     void launchInstant(String pkg){ try{ Intent ii=getPackageManager().getLaunchIntentForPackage(pkg); if(ii!=null){ ii.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_NO_ANIMATION); clearSearchNow(); startActivity(ii); overridePendingTransition(0,0); return; } }catch(Exception e){} }
-    void clearSearchNow(){ if(searchApps!=null) searchApps.setText(""); suggList.clear(); if(rvSugg!=null){ rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.GONE); } if(rvFolders!=null) rvFolders.setVisibility(View.VISIBLE); if(rvFav!=null) rvFav.setVisibility(View.VISIBLE); }
+    void clearSearchNow(){ if(searchApps!=null) searchApps.setText(""); suggList.clear(); if(rvSugg!=null){ rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.GONE); } if(rvFav!=null) rvFav.setVisibility(View.VISIBLE); }
 
     void pickDockApp(int idx){
         List<ResolveInfo> apps=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache;
@@ -231,20 +223,30 @@ public class MainActivity extends Activity {
 
     void loadFavs(){ favPkgs.clear(); String s=prefs.getString("favs",""); if(!s.isEmpty()) favPkgs.addAll(Arrays.asList(s.split(","))); }
     void saveFavs(){ prefs.edit().putString("favs", String.join(",", favPkgs)).apply(); }
-    void loadFolders(){ folders.clear(); String s=prefs.getString("folders",""); if(!s.isEmpty()){ for(String f:s.split("\\|")){ String[] p=f.split(":"); if(p.length>=1){ Folder fo=new Folder(p[0]); if(p.length>1&&!p[1].isEmpty()) fo.pkgs.addAll(Arrays.asList(p[1].split(","))); folders.add(fo);} } } }
-    void saveFolders(){ StringBuilder sb=new StringBuilder(); for(Folder fo:folders){ if(sb.length()>0) sb.append("|"); sb.append(fo.name).append(":").append(String.join(",", fo.pkgs)); } prefs.edit().putString("folders", sb.toString()).apply(); }
+
     void showAddFavDialog(){
-        List<ResolveInfo> apps=allAppsCache;
-        RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new LinearLayoutManager(this));
-        rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
-            class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
-            public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); }
-            public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=apps.get(pos); h.lb.setText(ri.loadLabel(getPackageManager()).toString()); Drawable cd=iconCache.get(ri.activityInfo.packageName); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->{ if(!favPkgs.contains(ri.activityInfo.packageName)){ favPkgs.add(ri.activityInfo.packageName); saveFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter()); } }); }
-            public int getItemCount(){ return apps.size(); }
-        });
-        AlertDialog dlg=createModernDialog("Ajouter fav", rv); dlg.show();
+        try{
+            List<ResolveInfo> tmp=allAppsCache;
+            if(tmp.isEmpty()){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);} tmp=new ArrayList<>(map.values()); }
+            final List<ResolveInfo> src=tmp;
+            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(12,12,12,12); rv.setHasFixedSize(true);
+            AlertDialog dlg=createModernDialog("Choisir apps 5x5 ("+favPkgs.size()+"/25)", rv);
+            rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
+                class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; View check; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label); check=new View(v.getContext()); check.setBackgroundColor(Color.GREEN); check.setVisibility(View.GONE); ((ViewGroup)v).addView(check); } }
+                public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(9); lb.setTextColor(Color.WHITE); } return new H(vv); }
+                public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=src.get(pos); String pkg=ri.activityInfo.packageName; h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(pkg); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); boolean added=favPkgs.contains(pkg); h.itemView.setAlpha(added?0.4f:1f);
+                    h.itemView.setOnClickListener(v->{
+                        if(favPkgs.contains(pkg)){ favPkgs.remove(pkg); Toast.makeText(MainActivity.this,"Retiré",0).show(); }
+                        else{ if(favPkgs.size()>=25){ Toast.makeText(MainActivity.this,"Max 25 apps (5x5)",0).show(); return; } favPkgs.add(pkg); }
+                        saveFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter()); notifyDataSetChanged();
+                    });
+                }
+                public int getItemCount(){ return src.size(); }
+            });
+            dlg.show();
+        }catch(Exception e){}
     }
-    void showCreateFolderDialog(){ EditText et=new EditText(this); et.setHint("Nom dossier"); et.setTextColor(Color.WHITE); et.setHintTextColor(0x88FFFFFF); AlertDialog dlg=createModernDialog("Nouveau dossier", et); dlg.setButton(AlertDialog.BUTTON_POSITIVE,"Créer",(d,w)->{ String n=et.getText().toString().trim(); if(n.isEmpty()) n="Dossier"; Folder fo=new Folder(n); folders.add(fo); saveFolders(); if(rvFolders!=null) rvFolders.setAdapter(new FolderAdapter()); }); dlg.setButton(AlertDialog.BUTTON_NEGATIVE,"Annuler",(d,w)->{}); dlg.show(); }
+
     void handleWeb(){ if(searchWeb==null) return; String q=searchWeb.getText().toString().trim(); if(q.isEmpty()) return; String low=q.toLowerCase(); String url; if(low.startsWith("yt ")) url="https://www.youtube.com/results?search_query="+Uri.encode(q.substring(3)); else if(low.startsWith("g ")) url="https://www.google.com/search?q="+Uri.encode(q.substring(2)); else if(q.contains(" ")) url="https://www.google.com/search?q="+Uri.encode(q); else if(q.contains(".")) url=q.startsWith("http")?q:"https://"+q; else url="https://www.google.com/search?q="+Uri.encode(q); try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }catch(Exception e){ Toast.makeText(this,q,0).show(); } }
 
     void applyGlassTheme(int col){
@@ -261,6 +263,5 @@ public class MainActivity extends Activity {
     }
 
     class SuggAdapter extends RecyclerView.Adapter<SuggAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ ResolveInfo ri=suggList.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cd=iconCache.get(ri.activityInfo.packageName); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launchInstant(ri.activityInfo.packageName)); }catch(Exception e){} } public int getItemCount(){ return suggList.size(); } }
-    class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; H(View v){super(v); ic=v.findViewById(R.id.icon);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ String pkg=favPkgs.get(pos); Drawable cd=iconCache.get(pkg); if(cd!=null) h.ic.setImageDrawable(cd); else h.ic.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launchInstant(pkg)); }catch(Exception e){} } public int getItemCount(){ return favPkgs.size(); } }
-    class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.H>{ class H extends RecyclerView.ViewHolder{ TextView lb; ImageView ic; H(View v){super(v); lb=v.findViewById(R.id.label); ic=v.findViewById(R.id.icon);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ Folder fo=folders.get(pos); h.lb.setText(fo.name); } public int getItemCount(){ return folders.size(); } }
+    class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); TextView lb=vv.findViewById(R.id.label); if(lb!=null){ lb.setMaxLines(1); lb.setEllipsize(android.text.TextUtils.TruncateAt.END); lb.setTextSize(10); lb.setTextColor(Color.WHITE); } return new H(vv); } public void onBindViewHolder(H h,int pos){ try{ String pkg=favPkgs.get(pos); ResolveInfo ri=null; for(ResolveInfo r:allAppsCache){ if(r.activityInfo.packageName.equals(pkg)){ ri=r; break; } } if(ri!=null) h.lb.setText(ri.loadLabel(getPackageManager())); else h.lb.setText(pkg); Drawable cd=iconCache.get(pkg); if(cd!=null) h.ic.setImageDrawable(cd); else try{ h.ic.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); }catch(Exception e){} h.itemView.setOnClickListener(v->launchInstant(pkg)); h.itemView.setOnLongClickListener(v->{ favPkgs.remove(pos); saveFavs(); notifyDataSetChanged(); return true; }); }catch(Exception e){} } public int getItemCount(){ return favPkgs.size(); } }
 }
