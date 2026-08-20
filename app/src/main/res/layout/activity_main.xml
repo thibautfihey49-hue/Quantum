@@ -1,25 +1,93 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:background="@drawable/wallpaper_huntrx"
-    android:orientation="vertical"
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="16dp">
+    android:layout_height="match_parent">
 
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="HUNTR/X • 11:41 • Paris"
-        android:textAlignment="center"
-        android:textColor="#9B8EC4"
-        android:textSize="20sp"/>
+    <ImageView
+        android:id="@+id/wallpaperView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/wallpaper_huntrx"
+        android:scaleType="centerCrop" />
 
-    <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <EditText android:background="@drawable/search_bar_huntrx"
-        android:layout_width="match_parent" android:layout_height="56dp"
-        android:hint="Rechercher apps..." android:paddingStart="20dp"
-        android:layout_marginBottom="12dp"/>
+        <TextView
+            android:id="@+id/clock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="HUNTR/X • 11:41 • Paris"
+            android:textAlignment="center"
+            android:textColor="#9B8EC4"
+            android:textSize="20sp" />
 
-    <EditText android:background="@drawable/search_bar_huntrx"
-        android:layout_width="match_parent" android:layout_height="56dp"
-        android:hint="yt Luffy, g, d, w..." android:paddingStart="20dp"
-        android:layout_marginBottom="16dp"/>
-</LinearLayout>
+        <TextView
+            android:id="@+id/batteryInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔋 100%"
+            android:textAlignment="center"
+            android:textColor="#FFD87A"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvSuggestions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvFavorites"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvFolders"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"/>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <EditText
+                android:id="@+id/searchAppsMain"
+                android:background="@drawable/search_bar_huntrx"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"
+                android:hint="Rechercher apps..." android:paddingStart="20dp"/>
+            <TextView
+                android:id="@+id/clearApps"
+                android:layout_width="wrap_content" android:layout_height="56dp"
+                android:text="✕" android:gravity="center" android:padding="16dp"
+                android:textColor="#9B8EC4"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="12dp">
+            <EditText
+                android:id="@+id/searchWebMain"
+                android:background="@drawable/search_bar_huntrx"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"
+                android:hint="yt Luffy, g, d, w..." android:paddingStart="20dp"/>
+            <TextView
+                android:id="@+id/btnWebGo"
+                android:layout_width="56dp" android:layout_height="56dp"
+                android:text="Go" android:gravity="center"
+                android:background="@drawable/search_bar_huntrx" android:layout_marginStart="8dp"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="12dp" android:gravity="center">
+            <TextView android:id="@+id/btnAddFav" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fav" android:padding="12dp"/>
+            <TextView android:id="@+id/btnAddFolder" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Folder" android:padding="12dp"/>
+            <TextView android:id="@+id/btnBooster" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Boost" android:padding="12dp"/>
+            <TextView android:id="@+id/btnMenu" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Menu" android:padding="12dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+</FrameLayout>
