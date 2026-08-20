@@ -5,27 +5,21 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="6dp">
-
     <ImageView
         android:id="@+id/icon"
         android:layout_width="56dp"
         android:layout_height="56dp"
         android:scaleType="centerCrop"
-        android:clipToOutline="true"
-        android:background="@android:color/transparent" />
-
+        android:clipToOutline="true" />
     <TextView
         android:id="@+id/label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:maxLines="2"
-        android:minLines="1"
-        android:ellipsize="end"
         android:gravity="center"
+        android:ellipsize="end"
         android:textSize="11sp"
         android:textColor="#FFFFFF"
         android:alpha="0.95"
-        android:lineSpacingExtra="1dp"
         android:layout_marginTop="4dp" />
-
 </LinearLayout>
