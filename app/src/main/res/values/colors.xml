@@ -1,1 +1,36 @@
-<resources><color name="black">#000</color><color name="white">#FFF</color></resources>
+<resources><color name="black">#000</color><color name="white">#FFF</color>
+    <!-- QUANTUM FULL PALETTE -->
+    <color name="q_red">#F44336</color>
+    <color name="q_pink">#E91E63</color>
+    <color name="q_purple">#9C27B0</color>
+    <color name="q_deep_purple">#673AB7</color>
+    <color name="q_indigo">#3F51B5</color>
+    <color name="q_blue">#2196F3</color>
+    <color name="q_light_blue">#03A9F4</color>
+    <color name="q_cyan">#00BCD4</color>
+    <color name="q_teal">#009688</color>
+    <color name="q_green">#4CAF50</color>
+    <color name="q_light_green">#8BC34A</color>
+    <color name="q_lime">#CDDC39</color>
+    <color name="q_yellow">#FFEB3B</color>
+    <color name="q_amber">#FFC107</color>
+    <color name="q_orange">#FF9800</color>
+    <color name="q_deep_orange">#FF5722</color>
+    <color name="q_brown">#795548</color>
+    <color name="q_grey">#9E9E9E</color>
+    <color name="q_blue_grey">#607D8B</color>
+    <color name="q_white">#FFFFFF</color>
+    <color name="q_black">#000000</color>
+    <color name="q_neon_blue">#00E5FF</color>
+    <color name="q_neon_pink">#FF00E5</color>
+    <color name="q_neon_green">#00FF88</color>
+    <color name="q_neon_purple">#8A2BE2</color>
+    <color name="q_gold">#FFD700</color>
+    <color name="q_silver">#C0C0C0</color>
+    <color name="q_crimson">#DC143C</color>
+    <color name="q_turquoise">#40E0D0</color>
+    <color name="q_emerald">#2ECC71</color>
+    <color name="q_sapphire">#0F52BA</color>
+    <color name="q_ruby">#9B111E</color>
+
+</resources>

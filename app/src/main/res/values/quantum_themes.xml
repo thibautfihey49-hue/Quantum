@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tous les themes utilisent ton Theme.QuantumFast de base -->
+    <style name="Theme.QuantumFast.Red" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_red</item></style>
+    <style name="Theme.QuantumFast.Pink" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_pink</item></style>
+    <style name="Theme.QuantumFast.Purple" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_purple</item></style>
+    <style name="Theme.QuantumFast.DeepPurple" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_deep_purple</item></style>
+    <style name="Theme.QuantumFast.Indigo" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_indigo</item></style>
+    <style name="Theme.QuantumFast.Blue" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_blue</item></style>
+    <style name="Theme.QuantumFast.LightBlue" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_light_blue</item></style>
+    <style name="Theme.QuantumFast.Cyan" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_cyan</item></style>
+    <style name="Theme.QuantumFast.Teal" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_teal</item></style>
+    <style name="Theme.QuantumFast.Green" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_green</item></style>
+    <style name="Theme.QuantumFast.LightGreen" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_light_green</item></style>
+    <style name="Theme.QuantumFast.Lime" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_lime</item></style>
+    <style name="Theme.QuantumFast.Yellow" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_yellow</item></style>
+    <style name="Theme.QuantumFast.Amber" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_amber</item></style>
+    <style name="Theme.QuantumFast.Orange" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_orange</item></style>
+    <style name="Theme.QuantumFast.DeepOrange" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_deep_orange</item></style>
+    <style name="Theme.QuantumFast.Brown" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_brown</item></style>
+    <style name="Theme.QuantumFast.Grey" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_grey</item></style>
+    <style name="Theme.QuantumFast.BlueGrey" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_blue_grey</item></style>
+    <style name="Theme.QuantumFast.NeonBlue" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_neon_blue</item></style>
+    <style name="Theme.QuantumFast.NeonPink" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_neon_pink</item></style>
+    <style name="Theme.QuantumFast.NeonGreen" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_neon_green</item></style>
+    <style name="Theme.QuantumFast.NeonPurple" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_neon_purple</item></style>
+    <style name="Theme.QuantumFast.Gold" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_gold</item></style>
+    <style name="Theme.QuantumFast.Crimson" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_crimson</item></style>
+    <style name="Theme.QuantumFast.Turquoise" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_turquoise</item></style>
+    <style name="Theme.QuantumFast.Emerald" parent="Theme.QuantumFast"><item name="colorPrimary">@color/q_emerald</item></style>
+</resources>
