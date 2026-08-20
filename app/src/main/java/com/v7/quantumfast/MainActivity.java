@@ -31,7 +31,28 @@ public class MainActivity extends Activity {
     String[] dockKeys={"dock_phone","dock_msg","dock_extra","dock_drawer","dock_cam","dock_chrome"};
     String[] defaultPkgs={"com.android.dialer","com.google.android.apps.messaging","com.android.settings","com.v7.quantumfast","com.android.camera2","com.android.chrome"};
     int getNavBarH(){ int id=getResources().getIdentifier("navigation_bar_height","dimen","android"); return id>0?getResources().getDimensionPixelSize(id):0; }
-    View findV(String... names){ for(String s:names){ int id=getResources().getIdentifier(s,"id",getPackageName()); // dock lockedcatch(Exception e){}
+    View findV(String... names){ for(String s:names){ int id=getResources().getIdentifier(s,"id",getPackageName()); if(id!=0){ View v=findViewById(id); if(v!=null) return v; } } return null; }
+
+    @Override protected void onCreate(Bundle b){
+        super.onCreate(b);
+        setContentView(R.layout.activity_main);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        prefs=getSharedPreferences("dock",0);
+        glassPrefs=getSharedPreferences("glass",0);
+        mainRoot=findViewById(R.id.root);
+        searchApps=findViewById(R.id.searchAppsMain);
+        searchWeb=findViewById(R.id.searchWebMain);
+        rvSugg=findViewById(R.id.rvSuggestions);
+        rvFav=findViewById(R.id.rvFavorites);
+
+        // FIX DOCK ROGNE DEFINITIF
+        View dock=findViewById(R.id.dock);
+        if(dock!=null){
+            dock.setVisibility(View.VISIBLE);
+            dock.setPadding(0,0,0,getNavBarH()-40);
+            try{ ((ViewGroup.MarginLayoutParams)dock.getLayoutParams()).bottomMargin=getNavBarH()-40; }catch(Exception e){}
         }
 
         if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setVisibility(View.GONE); rvSugg.setAdapter(new SuggAdapter()); }
