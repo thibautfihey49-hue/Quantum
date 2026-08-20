@@ -62,7 +62,16 @@ protected void onCreate(Bundle b){
         @Override public boolean onFling(MotionEvent e1, MotionEvent e2, float vx, float vy){ float dy=e2.getY()-e1.getY(); if(Math.abs(dy)>200){ if(dy<0){ openDrawerWithQuery(""); return true; } } return false; }
         @Override public boolean onDoubleTap(MotionEvent e){ try{ DevicePolicyManager dpm=(DevicePolicyManager)getSystemService(DEVICE_POLICY_SERVICE); if(dpm.isAdminActive(new ComponentName(MainActivity.this, AdminReceiver.class))) dpm.lockNow(); }catch(Exception ex){} return true; }
     }); View root=findViewById(R.id.root); root.setOnTouchListener((v,ev)->{ gd.onTouchEvent(ev); return false; }); }
-    void loadUsage(){ Map<String,?> all=prefs.getAll(); for(Map.Entry<String,?> e:all.entrySet()) if(e.getKey().startsWith("use_")&& e.getValue() instanceof Long) usageMap.put(e.getKey().substring(4),(Long)e.getValue()); }
+    
+    void applyGlassTheme(int col){
+        try{
+            int[] bars={R.id.searchAppsMain,R.id.searchWebMain};
+            for(int id:bars){ android.view.View v=findViewById(id); if(v!=null && v.getBackground()!=null) v.getBackground().setColorFilter(col, android.graphics.PorterDuff.Mode.SRC_ATOP); }
+            // restore au démarrage
+        }catch(Exception e){}
+    }
+    void loadUsage(){
+ Map<String,?> all=prefs.getAll(); for(Map.Entry<String,?> e:all.entrySet()) if(e.getKey().startsWith("use_")&& e.getValue() instanceof Long) usageMap.put(e.getKey().substring(4),(Long)e.getValue()); }
     void trackUsage(String pkg){ long now=System.currentTimeMillis(); usageMap.put(pkg,now); prefs.edit().putLong("use_"+pkg,now).apply(); }
     void requestAllPerms(){ List<String> need=new ArrayList<>(); String[] all={android.Manifest.permission.READ_MEDIA_IMAGES, android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS}; for(String p:all){ if(ContextCompat.checkSelfPermission(this,p)!=PackageManager.PERMISSION_GRANTED) need.add(p); } if(!need.isEmpty()) ActivityCompat.requestPermissions(this, need.toArray(new String[0]), 999); }
         exec.execute(()->{
