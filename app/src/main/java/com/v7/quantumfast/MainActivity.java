@@ -3,15 +3,18 @@ import android.app.*;
 import android.content.*;
 import android.content.pm.*;
 import android.graphics.*;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.*;
 import android.provider.Settings;
+import android.util.LruCache;
 import android.view.*;
 import android.widget.*;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
     View mainRoot;
@@ -20,8 +23,12 @@ public class MainActivity extends Activity {
     View googleZone, youtubeZone, folderZone;
     SharedPreferences prefs, glassPrefs;
     List<ResolveInfo> suggList=new ArrayList<>();
+    List<ResolveInfo> allAppsCache=new ArrayList<>();
+    LruCache<String, Drawable> iconCache=new LruCache<>(120);
     List<String> favPkgs=new ArrayList<>();
     List<Folder> folders=new ArrayList<>();
+    ExecutorService pool=Executors.newFixedThreadPool(2);
+    Handler mainH=new Handler(Looper.getMainLooper());
     String[] dockKeys={"dock_phone","dock_msg","dock_extra","dock_drawer","dock_cam","dock_chrome"};
     String[] defaultPkgs={"com.android.dialer","com.google.android.apps.messaging","com.android.settings","com.v7.quantumfast","com.android.camera2","com.android.chrome"};
     static class Folder{ String name; List<String> pkgs=new ArrayList<>(); Folder(String n){name=n;} }
@@ -39,19 +46,15 @@ public class MainActivity extends Activity {
         rvSugg=(RecyclerView)findViewGlass("rvSuggestions","rvSugg","suggestions");
         rvFav=(RecyclerView)findViewGlass("rvFavorites","rvFav","favs");
         rvFolders=(RecyclerView)findViewGlass("rvFolders","folders");
+        googleZone=findViewGlass("Google","btnGoogle","google","G","gCard");
+        youtubeZone=findViewGlass("YouTube","youtube","YouTubeCard","Y","yCard");
+        folderZone=findViewGlass("folderZone","zoneFolders","containerFolders","foldersContainer","Tout");
 
-        // zones à cacher
-        googleZone=findViewGlass("Google","btnGoogle","google","G","gCard","cardGoogle");
-        youtubeZone=findViewGlass("YouTube","youtube","YouTubeCard","Y","yCard","cardYoutube");
-        folderZone=findViewGlass("folderZone","zoneFolders","containerFolders","foldersContainer","Tout","folderTout");
+        if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setHasFixedSize(true); rvSugg.setItemViewCacheSize(30); rvSugg.setAdapter(new SuggAdapter()); }
+        if(rvFav!=null){ rvFav.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL,false)); rvFav.setHasFixedSize(true); }
+        if(rvFolders!=null){ rvFolders.setLayoutManager(new GridLayoutManager(this,5)); rvFolders.setHasFixedSize(true); }
 
-        if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setAdapter(new SuggAdapter()); }
-        if(rvFav!=null){ rvFav.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL,false)); }
-        if(rvFolders!=null){ rvFolders.setLayoutManager(new GridLayoutManager(this,5)); }
-
-        // PERFECTION : sans Google/Youtube affichés
-        hideGoogleYoutubeForever();
-
+        hideGoogleYoutubeAndBoostForever();
         fixModernFrame();
 
         View cl=findViewGlass("clearApps","btnClear","clear"); if(cl!=null) cl.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); });
@@ -59,43 +62,39 @@ public class MainActivity extends Activity {
         if(searchWeb!=null) searchWeb.setOnEditorActionListener((v,id,ev)->{ if(id==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH){ handleWeb(); return true;} return false; });
         View fav=findViewGlass("btnAddFav","Fav","fav","btnFav"); if(fav!=null) fav.setOnClickListener(v->showAddFavDialog());
         View fol=findViewGlass("btnAddFolder","Folder","folder","btnFolder"); if(fol!=null) fol.setOnClickListener(v->showCreateFolderDialog());
-        View boost=findViewGlass("btnBoost","Boost","boost"); if(boost!=null) boost.setOnClickListener(v->showBoostModern());
         View men=findViewGlass("btnMenu","Menu","menu","btnMenu"); if(men!=null) men.setOnClickListener(v->showPaletteDialog());
 
         loadFavs(); loadFolders();
         if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
         if(rvFolders!=null) rvFolders.setAdapter(new FolderAdapter());
 
-        setupAtAGlanceSimple(); setupDock(); preloadFast();
+        setupAtAGlanceSimple();
+        preloadMax(); // CACHE + PRELOAD MAX
         applyGlassTheme(glassPrefs.getInt("glass_color",0xFF6B4C8A));
 
         if(searchApps!=null) searchApps.addTextChangedListener(new android.text.TextWatcher(){
             public void beforeTextChanged(CharSequence s,int a,int b,int c){}
             public void onTextChanged(CharSequence s,int a,int b,int c){
                 String q=s.toString();
-                // cache dossier quand on écrit
                 boolean typing=!q.trim().isEmpty();
                 if(folderZone!=null) folderZone.setVisibility(typing?View.GONE:View.VISIBLE);
                 if(rvFolders!=null) rvFolders.setVisibility(typing?View.GONE:View.VISIBLE);
                 if(rvFav!=null) rvFav.setVisibility(typing?View.GONE:View.VISIBLE);
-                if(googleZone!=null) googleZone.setVisibility(View.GONE);
-                if(youtubeZone!=null) youtubeZone.setVisibility(View.GONE);
-                filterApps(q);
+                filterAppsInstant(q);
             }
             public void afterTextChanged(android.text.Editable s){}
         });
 
         checkAndAskPermissions();
-        mainRoot.postDelayed(this::checkDefaultLauncher, 900);
+        mainRoot.postDelayed(this::checkDefaultLauncher, 700);
     }
 
-    void hideGoogleYoutubeForever(){
+    void hideGoogleYoutubeAndBoostForever(){
         try{
             if(googleZone!=null) googleZone.setVisibility(View.GONE);
             if(youtubeZone!=null) youtubeZone.setVisibility(View.GONE);
-            // brute force : cherche tous les TextView Google/YouTube et cache parent
-            ViewGroup root=(ViewGroup)mainRoot;
-            if(root!=null) hideByTextRecursive(root);
+            View boost=findViewGlass("btnBoost","Boost","boost","BoostCard"); if(boost!=null) boost.setVisibility(View.GONE);
+            ViewGroup root=(ViewGroup)mainRoot; if(root!=null) hideByTextRecursive(root);
         }catch(Exception e){}
     }
     void hideByTextRecursive(ViewGroup vg){
@@ -103,10 +102,8 @@ public class MainActivity extends Activity {
             View v=vg.getChildAt(i);
             if(v instanceof TextView){
                 String t=((TextView)v).getText().toString();
-                if(t.equalsIgnoreCase("Google")||t.equalsIgnoreCase("YouTube")){
-                    View parent=(View)v.getParent();
-                    if(parent!=null) parent.setVisibility(View.GONE);
-                    v.setVisibility(View.GONE);
+                if(t.equalsIgnoreCase("Google")||t.equalsIgnoreCase("YouTube")||t.equalsIgnoreCase("Boost")){
+                    View parent=(View)v.getParent(); if(parent!=null) parent.setVisibility(View.GONE); v.setVisibility(View.GONE);
                 }
             }
             if(v instanceof ViewGroup) hideByTextRecursive((ViewGroup)v);
@@ -122,31 +119,60 @@ public class MainActivity extends Activity {
             }
         }catch(Exception e){}
     }
+
+    // PRELOAD MAXIMUM - OUVERTURE INSTANTANEE
+    void preloadMax(){
+        pool.execute(()->{
+            try{
+                Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER);
+                List<ResolveInfo> all=getPackageManager().queryIntentActivities(it, PackageManager.MATCH_DEFAULT_ONLY);
+                Collections.sort(all,(a,b)->a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString()));
+                allAppsCache=all;
+                for(ResolveInfo ri:all){ try{ String pkg=ri.activityInfo.packageName; if(iconCache.get(pkg)==null) iconCache.put(pkg, ri.loadIcon(getPackageManager())); }catch(Exception e){} }
+                mainH.post(()->{ setupDock(); if(rvFav!=null) rvFav.getAdapter().notifyDataSetChanged(); });
+            }catch(Exception e){}
+            mainH.post(()->{ loadWallpaperFast(); preloadDockIcons(); });
+        });
+    }
+    void preloadDockIcons(){
+        try{ for(int i=0;i<dockKeys.length;i++){ String pkg=prefs.getString(dockKeys[i], getSmartDefault(i)); if(pkg!=null&&iconCache.get(pkg)==null){ try{ Drawable d=getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager()); iconCache.put(pkg,d);}catch(Exception e){} } } }catch(Exception e){}
+    }
+
     boolean isMyLauncherDefault(){ try{ Intent i=new Intent(Intent.ACTION_MAIN); i.addCategory(Intent.CATEGORY_HOME); ResolveInfo r=getPackageManager().resolveActivity(i, PackageManager.MATCH_DEFAULT_ONLY); return r!=null && r.activityInfo.packageName.equals(getPackageName()); }catch(Exception e){ return false; } }
     void checkDefaultLauncher(){ if(isMyLauncherDefault()) return; if(prefs.getBoolean("asked_default",false)) return; new AlertDialog.Builder(this).setTitle("Launcher par défaut").setMessage("Mettre Quantum en launcher par défaut au démarrage?").setPositiveButton("Oui",(di,w)->{ prefs.edit().putBoolean("asked_default",true).apply(); try{ startActivity(new Intent(Settings.ACTION_HOME_SETTINGS)); }catch(Exception e){ Intent c=new Intent(Intent.ACTION_MAIN); c.addCategory(Intent.CATEGORY_HOME); c.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(Intent.createChooser(c,"Choisir launcher")); } }).setNegativeButton("Plus tard",null).show(); }
     void checkAndAskPermissions(){ try{ if(Build.VERSION.SDK_INT>=33){ if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_MEDIA_IMAGES)!=PackageManager.PERMISSION_GRANTED) ActivityCompat.requestPermissions(this,new String[]{android.Manifest.permission.READ_MEDIA_IMAGES},101); }else{ if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE)!=PackageManager.PERMISSION_GRANTED) ActivityCompat.requestPermissions(this,new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE},101); } }catch(Exception e){} }
 
     View findViewGlass(String...names){ for(String n:names){ int id=getResources().getIdentifier(n,"id",getPackageName()); if(id!=0){ View v=findViewById(id); if(v!=null) return v; } } return null; }
-    void preloadFast(){ try{ String s=prefs.getString("custom_wallpaper_uri",""); if(s.isEmpty()) return; Uri uri=Uri.parse(s); View bg=findViewGlass("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageURI(uri); }catch(Exception e){} }
-    @Override protected void onActivityResult(int rc,int res,Intent data){ if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri u=data.getData(); try{ getContentResolver().takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri",u.toString()).apply(); preloadFast(); } }
+    void loadWallpaperFast(){ try{ String s=prefs.getString("custom_wallpaper_uri",""); if(s.isEmpty()) return; Uri uri=Uri.parse(s); View bg=findViewGlass("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageURI(uri); }catch(Exception e){} }
+    @Override protected void onActivityResult(int rc,int res,Intent data){ if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri u=data.getData(); try{ getContentResolver().takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri",u.toString()).apply(); loadWallpaperFast(); } }
 
     void setupAtAGlanceSimple(){ clock(); try{ BroadcastReceiver br=new BroadcastReceiver(){ public void onReceive(Context c, Intent i){ int lvl=i.getIntExtra("level",-1); TextView tv=(TextView)findViewGlass("batteryInfo","battery","bat"); if(tv!=null&&lvl!=-1) tv.setText("🔋 "+lvl+"%"); } }; registerReceiver(br,new IntentFilter(Intent.ACTION_BATTERY_CHANGED)); }catch(Exception e){} }
     void clock(){ TextView c=(TextView)findViewGlass("clock","time"); TextView d=(TextView)findViewGlass("date","dateInfo"); SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE); SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE); Runnable r=new Runnable(){public void run(){ try{ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); }catch(Exception e){} if(mainRoot!=null) mainRoot.postDelayed(this,30000); }}; r.run(); }
 
-    void filterApps(String q){ try{ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); suggList.clear(); if(q==null||q.trim().isEmpty()){ if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter()); return;} String lq=q.toLowerCase(); for(ResolveInfo ri:all){ String lb=ri.loadLabel(getPackageManager()).toString().toLowerCase(); if(lb.contains(lq)) suggList.add(ri);} if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter()); }catch(Exception e){} }
+    void filterAppsInstant(String q){
+        try{
+            suggList.clear();
+            if(q==null||q.trim().isEmpty()){ if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter()); return;}
+            String lq=q.toLowerCase();
+            List<ResolveInfo> src=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache;
+            for(ResolveInfo ri:src){ String lb=ri.loadLabel(getPackageManager()).toString().toLowerCase(); if(lb.contains(lq)) suggList.add(ri); if(suggList.size()>50) break; }
+            if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter());
+        }catch(Exception e){}
+    }
     String resolveIntentPkg(Intent intent){ try{ List<ResolveInfo> r=getPackageManager().queryIntentActivities(intent,0); if(r!=null&&!r.isEmpty()) return r.get(0).activityInfo.packageName; }catch(Exception e){} return null; }
     String getSmartDefault(int idx){ try{ if(idx==0){ String p=resolveIntentPkg(new Intent(Intent.ACTION_DIAL)); if(p!=null) return p;} if(idx==1){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("sms:"))); if(p!=null) return p;} if(idx==2) return "com.android.settings"; if(idx==4){ String p=resolveIntentPkg(new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)); if(p!=null) return p;} if(idx==5){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("http://google.com"))); if(p!=null) return p;} }catch(Exception e){} return defaultPkgs[idx]; }
     void setupDock(){
         int[] ids={R.id.dPhone,R.id.dMsg,R.id.dExtra,R.id.dDrawer,R.id.dCam,R.id.dChrome};
-        for(int i=0;i<ids.length;i++){ final int idx=i; View vv=findViewById(ids[i]); if(vv==null) continue; ImageView iv; if(vv instanceof ImageView) iv=(ImageView)vv; else{ try{ iv=(ImageView)((FrameLayout)vv).getChildAt(0);}catch(Exception e){ continue; } } if(idx==3){ try{ iv.setImageResource(android.R.drawable.ic_menu_sort_by_size); iv.setBackgroundColor(Color.TRANSPARENT);}catch(Exception e){} vv.setOnClickListener(v->openDrawerWithQuery("")); continue; } String saved=prefs.getString(dockKeys[idx], null); if(saved==null) saved=getSmartDefault(idx); String pkg=findRealPkg(saved); if(pkg==null) pkg=getSmartDefault(idx); updateDockIcon(iv,pkg); vv.setOnClickListener(v->{ String rs=prefs.getString(dockKeys[idx], getSmartDefault(idx)); String rp=findRealPkg(rs); if(rp!=null) launch(rp); }); vv.setOnLongClickListener(v->{ pickDockApp(idx); return true; }); }
+        for(int i=0;i<ids.length;i++){ final int idx=i; View vv=findViewById(ids[i]); if(vv==null) continue; ImageView iv; if(vv instanceof ImageView) iv=(ImageView)vv; else{ try{ iv=(ImageView)((FrameLayout)vv).getChildAt(0);}catch(Exception e){ continue; } } if(idx==3){ try{ iv.setImageResource(android.R.drawable.ic_menu_sort_by_size); iv.setBackgroundColor(Color.TRANSPARENT);}catch(Exception e){} vv.setOnClickListener(v->openDrawerWithQuery("")); continue; } String saved=prefs.getString(dockKeys[idx], null); if(saved==null) saved=getSmartDefault(idx); String pkg=findRealPkg(saved); if(pkg==null) pkg=getSmartDefault(idx); updateDockIcon(iv,pkg); vv.setOnClickListener(v->{ String rs=prefs.getString(dockKeys[idx], getSmartDefault(idx)); String rp=findRealPkg(rs); if(rp!=null) launchInstant(rp); }); vv.setOnLongClickListener(v->{ pickDockApp(idx); return true; }); }
     }
     String findRealPkg(String pkg){ if(pkg==null) return null; try{ getPackageManager().getPackageInfo(pkg,0); return pkg; }catch(Exception e){ return null; } }
-    void updateDockIcon(ImageView iv, String pkg){ try{ if(pkg==null) throw new Exception(); iv.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); iv.setBackgroundColor(Color.TRANSPARENT);}catch(Exception e){ iv.setImageResource(android.R.drawable.sym_def_app_icon); } }
-    void launch(String pkg){ try{ Intent ii=getPackageManager().getLaunchIntentForPackage(pkg); if(ii!=null){ ii.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT); clearSearchNow(); startActivity(ii); return; } }catch(Exception e){} try{ Intent it=getPackageManager().getLaunchIntentForPackage(pkg); if(it!=null){ it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); clearSearchNow(); startActivity(it);} }catch(Exception e){} }
+    void updateDockIcon(ImageView iv, String pkg){ try{ if(pkg==null) throw new Exception(); Drawable cached=iconCache.get(pkg); if(cached!=null) iv.setImageDrawable(cached); else iv.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); iv.setBackgroundColor(Color.TRANSPARENT);}catch(Exception e){ iv.setImageResource(android.R.drawable.sym_def_app_icon); } }
+    void launchInstant(String pkg){ try{ Intent ii=getPackageManager().getLaunchIntentForPackage(pkg); if(ii!=null){ ii.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_NO_ANIMATION); clearSearchNow(); startActivity(ii); overridePendingTransition(0,0); return; } }catch(Exception e){} }
     void openDrawerWithQuery(String q){ if(searchApps!=null) searchApps.setText(q); }
     void clearSearchNow(){ if(searchApps!=null) searchApps.setText(""); suggList.clear(); if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter()); if(folderZone!=null) folderZone.setVisibility(View.VISIBLE); if(rvFolders!=null) rvFolders.setVisibility(View.VISIBLE); if(rvFav!=null) rvFav.setVisibility(View.VISIBLE); }
     void pickDockApp(int idx){
-        Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> apps=getPackageManager().queryIntentActivities(it,0);
+        Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> apps=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(it,0) : allAppsCache;
         LinkedHashMap<String, ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:apps){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName, ri); }
         List<ResolveInfo> uniq=new ArrayList<>(map.values()); Collections.sort(uniq,(a,b)->a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString()));
         String[] names=new String[uniq.size()]; String[] pkgs=new String[uniq.size()]; for(int i=0;i<uniq.size();i++){ names[i]=uniq.get(i).loadLabel(getPackageManager()).toString(); pkgs[i]=uniq.get(i).activityInfo.packageName; }
@@ -156,61 +182,16 @@ public class MainActivity extends Activity {
     void saveFavs(){ prefs.edit().putString("favs", String.join(",", favPkgs)).apply(); }
     void loadFolders(){ folders.clear(); String s=prefs.getString("folders",""); if(!s.isEmpty()){ for(String f:s.split("\\|")){ String[] p=f.split(":"); if(p.length>=1){ Folder fo=new Folder(p[0]); if(p.length>1&&!p[1].isEmpty()) fo.pkgs.addAll(Arrays.asList(p[1].split(","))); folders.add(fo);} } } }
     void saveFolders(){ StringBuilder sb=new StringBuilder(); for(Folder fo:folders){ if(sb.length()>0) sb.append("|"); sb.append(fo.name).append(":").append(String.join(",", fo.pkgs)); } prefs.edit().putString("folders", sb.toString()).apply(); }
-    void showAddFavDialog(){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> apps=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String, ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:apps){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName, ri); } List<ResolveInfo> uniq=new ArrayList<>(map.values()); Collections.sort(uniq,(a,b)->a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString())); String[] names=new String[uniq.size()]; String[] pkgs=new String[uniq.size()]; for(int i=0;i<uniq.size();i++){ names[i]=uniq.get(i).loadLabel(getPackageManager()).toString(); pkgs[i]=uniq.get(i).activityInfo.packageName; } new AlertDialog.Builder(this).setTitle("Ajouter fav").setItems(names,(d,w)->{ if(!favPkgs.contains(pkgs[w])){ favPkgs.add(pkgs[w]); saveFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter()); }}).show(); }
+    void showAddFavDialog(){ List<ResolveInfo> apps=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache; LinkedHashMap<String, ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:apps){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName, ri); } List<ResolveInfo> uniq=new ArrayList<>(map.values()); Collections.sort(uniq,(a,b)->a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString())); String[] names=new String[uniq.size()]; String[] pkgs=new String[uniq.size()]; for(int i=0;i<uniq.size();i++){ names[i]=uniq.get(i).loadLabel(getPackageManager()).toString(); pkgs[i]=uniq.get(i).activityInfo.packageName; } new AlertDialog.Builder(this).setTitle("Ajouter fav").setItems(names,(d,w)->{ if(!favPkgs.contains(pkgs[w])){ favPkgs.add(pkgs[w]); saveFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter()); }}).show(); }
     void showCreateFolderDialog(){ EditText et=new EditText(this); et.setHint("Nom dossier"); new AlertDialog.Builder(this).setTitle("Nouveau dossier").setView(et).setPositiveButton("Créer",(d,w)->{ String n=et.getText().toString().trim(); if(n.isEmpty()) n="Dossier"; Folder fo=new Folder(n); folders.add(fo); saveFolders(); if(rvFolders!=null) rvFolders.setAdapter(new FolderAdapter()); }).setNegativeButton("Annuler",null).show(); }
 
-    void handleWeb(){ if(searchWeb==null) return; String q=searchWeb.getText().toString().trim(); if(q.isEmpty()) return; showBrowserChooserGlass(q); }
-    void showBrowserChooserGlass(String q){
-        String low=q.toLowerCase(); String url;
-        if(low.startsWith("yt ")) url="https://www.youtube.com/results?search_query="+Uri.encode(q.substring(3));
-        else if(low.startsWith("g ")) url="https://www.google.com/search?q="+Uri.encode(q.substring(2));
-        else if(low.startsWith("d ")) url="https://drive.google.com/drive/search?q="+Uri.encode(q.substring(2));
-        else if(low.startsWith("w ")) url="https://fr.wikipedia.org/wiki/"+Uri.encode(q.substring(2));
-        else if(q.contains(" ")) url="https://www.google.com/search?q="+Uri.encode(q);
-        else if(q.contains(".")) url=q.startsWith("http")?q:"https://"+q;
-        else url="https://www.google.com/search?q="+Uri.encode(q);
-        try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }catch(Exception e){ Toast.makeText(this,q,0).show(); }
-    }
-    String formatMB(long b){ return String.format(java.util.Locale.FRANCE,"%.0f MB", b/1024f/1024f); }
-    void showBoostModern(){
-        try{
-            ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);
-            ActivityManager.MemoryInfo mi=new ActivityManager.MemoryInfo(); am.getMemoryInfo(mi);
-            AlertDialog.Builder b=new AlertDialog.Builder(this); b.setTitle("Boost - Quantum");
-            LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(32,32,32,32);
-            TextView info=new TextView(this); info.setText("Total: "+formatMB(mi.totalMem)+" | Dispo: "+formatMB(mi.availMem)); root.addView(info);
-            b.setView(root); b.setPositiveButton("Nettoyer",(d,w)->{ Toast.makeText(this,"RAM libérée",0).show(); }); b.setNegativeButton("Fermer",null); b.show();
-        }catch(Exception e){}
-    }
+    void handleWeb(){ if(searchWeb==null) return; String q=searchWeb.getText().toString().trim(); if(q.isEmpty()) return; String low=q.toLowerCase(); String url; if(low.startsWith("yt ")) url="https://www.youtube.com/results?search_query="+Uri.encode(q.substring(3)); else if(low.startsWith("g ")) url="https://www.google.com/search?q="+Uri.encode(q.substring(2)); else if(low.startsWith("d ")) url="https://drive.google.com/drive/search?q="+Uri.encode(q.substring(2)); else if(low.startsWith("w ")) url="https://fr.wikipedia.org/wiki/"+Uri.encode(q.substring(2)); else if(q.contains(" ")) url="https://www.google.com/search?q="+Uri.encode(q); else if(q.contains(".")) url=q.startsWith("http")?q:"https://"+q; else url="https://www.google.com/search?q="+Uri.encode(q); try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }catch(Exception e){ Toast.makeText(this,q,0).show(); } }
 
-    android.graphics.drawable.Drawable createGlassDrawable(int col, float rad, int alpha){
-        int fill=Color.argb(alpha, Color.red(col), Color.green(col), Color.blue(col));
-        android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable(); d.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE); d.setCornerRadius(rad); d.setColor(fill);
-        d.setStroke((int)(1.2f*getResources().getDisplayMetrics().density), Color.argb(110,255,255,255));
-        return d;
-    }
-    void showPaletteDialog(){
-        float dens=getResources().getDisplayMetrics().density;
-        AlertDialog.Builder b=new AlertDialog.Builder(this); b.setTitle("Thème moderne");
-        GridLayout grid=new GridLayout(this); grid.setColumnCount(5);
-        int[] cols={0xFF6B4C8A,0xFF2196F3,0xFF00BCD4,0xFF4CAF50,0xFFE91E63,0xFF9C27B0,0xFF3F51B5,0xFFFF5722,0xFF212121,0xFFFFFFFF};
-        for(int col:cols){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(56*dens); lp.height=(int)(56*dens); lp.setMargins((int)(8*dens),(int)(8*dens),(int)(8*dens),(int)(8*dens)); v.setLayoutParams(lp); android.graphics.drawable.GradientDrawable bg=new android.graphics.drawable.GradientDrawable(); bg.setCornerRadius(16*dens); bg.setColor(col); if(col==0xFFFFFFFF) bg.setStroke((int)dens,0xFFCCCCCC); v.setBackground(bg); v.setOnClickListener(vw->{ glassPrefs.edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); grid.addView(v); }
-        b.setView(grid); b.setNegativeButton("Fermer",null); b.show();
-    }
-    void applyGlassTheme(int col){
-        try{
-            float dens=getResources().getDisplayMetrics().density;
-            double lum=(0.299*Color.red(col)+0.587*Color.green(col)+0.114*Color.blue(col))/255;
-            int textCol= lum>0.6? 0xFF1A1A1A : 0xFFFFFFFF; int hintCol= lum>0.6? 0x661A1A1A : 0x99FFFFFF;
-            for(int id:new int[]{R.id.searchAppsMain,R.id.searchWebMain}){ View v=findViewById(id); if(v!=null){ v.setBackground(createGlassDrawable(col, 28*dens, 85)); if(v instanceof EditText){ ((EditText)v).setTextColor(textCol); ((EditText)v).setHintTextColor(hintCol);} } }
-            View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setBackground(createGlassDrawable(col, 28*dens, 90));
-            View dock=findViewGlass("dock","dockBar","dock_container","dockContainer","bottomDock"); if(dock!=null) dock.setBackground(createGlassDrawable(col, 26*dens, 60));
-            for(String n:new String[]{"btnAddFav","Fav","btnAddFolder","Folder","btnBoost","Boost","btnMenu","Menu"}){
-                View vv=findViewGlass(n); if(vv!=null) vv.setBackground(createGlassDrawable(Color.BLACK, 20*dens, 110));
-            }
-        }catch(Exception e){}
-    }
-    class SuggAdapter extends RecyclerView.Adapter<SuggAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ ResolveInfo ri=suggList.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); h.ic.setImageDrawable(ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launch(ri.activityInfo.packageName)); }catch(Exception e){} } public int getItemCount(){ return suggList.size(); } }
-    class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; H(View v){super(v); ic=v.findViewById(R.id.icon);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ String pkg=favPkgs.get(pos); h.ic.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launch(pkg)); h.itemView.setOnLongClickListener(v->{ favPkgs.remove(pos); saveFavs(); notifyDataSetChanged(); return true; }); }catch(Exception e){} } public int getItemCount(){ return favPkgs.size(); } }
-    class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.H>{ class H extends RecyclerView.ViewHolder{ TextView lb; H(View v){super(v); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ Folder fo=folders.get(pos); h.lb.setText(fo.name); h.itemView.setOnClickListener(v->{ AlertDialog.Builder b=new AlertDialog.Builder(MainActivity.this); b.setTitle(fo.name); String[] pkgs=fo.pkgs.toArray(new String[0]); String[] names=new String[pkgs.length]; for(int i=0;i<pkgs.length;i++){ try{ names[i]=getPackageManager().getApplicationInfo(pkgs[i],0).loadLabel(getPackageManager()).toString(); }catch(Exception e){ names[i]=pkgs[i]; } } b.setItems(names,(d,w)->launch(pkgs[w])); b.setPositiveButton("Ajouter app",(d,w)->{ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> apps=getPackageManager().queryIntentActivities(it,0); String[] an=new String[apps.size()]; String[] ap=new String[apps.size()]; for(int i=0;i<apps.size();i++){ an[i]=apps.get(i).loadLabel(getPackageManager()).toString(); ap[i]=apps.get(i).activityInfo.packageName; } new AlertDialog.Builder(MainActivity.this).setTitle("Ajouter").setItems(an,(dd,ww)->{ fo.pkgs.add(ap[ww]); saveFolders(); notifyDataSetChanged(); }).show(); }); b.setNegativeButton("Supprimer dossier",(d,w)->{ folders.remove(pos); saveFolders(); notifyDataSetChanged(); }); b.show(); }); } public int getItemCount(){ return folders.size(); } }
+    android.graphics.drawable.Drawable createGlassDrawable(int col, float rad, int alpha){ int fill=Color.argb(alpha, Color.red(col), Color.green(col), Color.blue(col)); android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable(); d.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE); d.setCornerRadius(rad); d.setColor(fill); d.setStroke((int)(1.2f*getResources().getDisplayMetrics().density), Color.argb(110,255,255,255)); return d; }
+    void showPaletteDialog(){ float dens=getResources().getDisplayMetrics().density; AlertDialog.Builder b=new AlertDialog.Builder(this); b.setTitle("Thème moderne"); GridLayout grid=new GridLayout(this); grid.setColumnCount(5); int[] cols={0xFF6B4C8A,0xFF2196F3,0xFF00BCD4,0xFF4CAF50,0xFFE91E63,0xFF9C27B0,0xFF3F51B5,0xFFFF5722,0xFF212121,0xFFFFFFFF}; for(int col:cols){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(56*dens); lp.height=(int)(56*dens); lp.setMargins((int)(8*dens),(int)(8*dens),(int)(8*dens),(int)(8*dens)); v.setLayoutParams(lp); android.graphics.drawable.GradientDrawable bg=new android.graphics.drawable.GradientDrawable(); bg.setCornerRadius(16*dens); bg.setColor(col); if(col==0xFFFFFFFF) bg.setStroke((int)dens,0xFFCCCCCC); v.setBackground(bg); v.setOnClickListener(vw->{ glassPrefs.edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); grid.addView(v); } b.setView(grid); b.setNegativeButton("Fermer",null); b.show(); }
+    void applyGlassTheme(int col){ try{ float dens=getResources().getDisplayMetrics().density; double lum=(0.299*Color.red(col)+0.587*Color.green(col)+0.114*Color.blue(col))/255; int textCol= lum>0.6? 0xFF1A1A1A : 0xFFFFFFFF; int hintCol= lum>0.6? 0x661A1A1A : 0x99FFFFFF; for(int id:new int[]{R.id.searchAppsMain,R.id.searchWebMain}){ View v=findViewById(id); if(v!=null){ v.setBackground(createGlassDrawable(col, 28*dens, 85)); if(v instanceof EditText){ ((EditText)v).setTextColor(textCol); ((EditText)v).setHintTextColor(hintCol);} } } View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setBackground(createGlassDrawable(col, 28*dens, 90)); View dock=findViewGlass("dock","dockBar","dock_container","dockContainer","bottomDock"); if(dock!=null) dock.setBackground(createGlassDrawable(col, 26*dens, 60)); for(String n:new String[]{"btnAddFav","Fav","btnAddFolder","Folder","btnMenu","Menu"}){ View vv=findViewGlass(n); if(vv!=null) vv.setBackground(createGlassDrawable(Color.BLACK, 20*dens, 110)); } }catch(Exception e){} }
+
+    class SuggAdapter extends RecyclerView.Adapter<SuggAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ ResolveInfo ri=suggList.get(pos); h.lb.setText(ri.loadLabel(getPackageManager())); Drawable cached=iconCache.get(ri.activityInfo.packageName); h.ic.setImageDrawable(cached!=null?cached:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launchInstant(ri.activityInfo.packageName)); }catch(Exception e){} } public int getItemCount(){ return suggList.size(); } }
+    class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; H(View v){super(v); ic=v.findViewById(R.id.icon);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ String pkg=favPkgs.get(pos); Drawable cached=iconCache.get(pkg); if(cached!=null) h.ic.setImageDrawable(cached); else h.ic.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->launchInstant(pkg)); h.itemView.setOnLongClickListener(v->{ favPkgs.remove(pos); saveFavs(); notifyDataSetChanged(); return true; }); }catch(Exception e){} } public int getItemCount(){ return favPkgs.size(); } }
+    class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.H>{ class H extends RecyclerView.ViewHolder{ TextView lb; H(View v){super(v); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ Folder fo=folders.get(pos); h.lb.setText(fo.name); h.itemView.setOnClickListener(v->{ AlertDialog.Builder b=new AlertDialog.Builder(MainActivity.this); b.setTitle(fo.name); String[] pkgs=fo.pkgs.toArray(new String[0]); String[] names=new String[pkgs.length]; for(int i=0;i<pkgs.length;i++){ try{ names[i]=getPackageManager().getApplicationInfo(pkgs[i],0).loadLabel(getPackageManager()).toString(); }catch(Exception e){ names[i]=pkgs[i]; } } b.setItems(names,(d,w)->launchInstant(pkgs[w])); b.setPositiveButton("Ajouter app",(d,w)->{ List<ResolveInfo> apps=allAppsCache; String[] an=new String[apps.size()]; String[] ap=new String[apps.size()]; for(int i=0;i<apps.size();i++){ an[i]=apps.get(i).loadLabel(getPackageManager()).toString(); ap[i]=apps.get(i).activityInfo.packageName; } new AlertDialog.Builder(MainActivity.this).setTitle("Ajouter").setItems(an,(dd,ww)->{ fo.pkgs.add(ap[ww]); saveFolders(); notifyDataSetChanged(); }).show(); }); b.setNegativeButton("Supprimer dossier",(d,w)->{ folders.remove(pos); saveFolders(); notifyDataSetChanged(); }); b.show(); }); } public int getItemCount(){ return folders.size(); } }
 }
