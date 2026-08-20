@@ -51,8 +51,8 @@ public class MainActivity extends Activity {
         View dock=findViewById(R.id.dock);
         if(dock!=null){
             dock.setVisibility(View.VISIBLE);
-            dock.setPadding(0,0,0,getNavBarH()+0);
-            try{ ((ViewGroup.MarginLayoutParams)dock.getLayoutParams()).bottomMargin=getNavBarH(); }catch(Exception e){}
+            dock.setPadding(0,0,0,getNavBarH()-40);
+            try{ ((ViewGroup.MarginLayoutParams)dock.getLayoutParams()).bottomMargin=getNavBarH()-40; }catch(Exception e){}
         }
 
         if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setVisibility(View.GONE); rvSugg.setAdapter(new SuggAdapter()); }
