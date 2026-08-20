@@ -1,8 +1,25 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:background="@drawable-nodpi/wallpaper_huntrx"
-    android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="16dp">
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="HUNTR/X • 11:41 • Paris" android:textAlignment="center" android:textColor="#9B8EC4" android:textSize="20sp"/>
+    android:background="@drawable/wallpaper_huntrx"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="HUNTR/X • 11:41 • Paris"
+        android:textAlignment="center"
+        android:textColor="#9B8EC4"
+        android:textSize="20sp"/>
+
     <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
-    <EditText android:background="@drawable/search_bar_huntrx" android:layout_width="match_parent" android:layout_height="56dp" android:hint="Rechercher apps..." android:paddingStart="20dp" android:layout_marginBottom="12dp"/>
-    <EditText android:background="@drawable/search_bar_huntrx" android:layout_width="match_parent" android:layout_height="56dp" android:hint="yt Luffy, g, d, w..." android:paddingStart="20dp" android:layout_marginBottom="16dp"/>
+
+    <EditText android:background="@drawable/search_bar_huntrx"
+        android:layout_width="match_parent" android:layout_height="56dp"
+        android:hint="Rechercher apps..." android:paddingStart="20dp"
+        android:layout_marginBottom="12dp"/>
+
+    <EditText android:background="@drawable/search_bar_huntrx"
+        android:layout_width="match_parent" android:layout_height="56dp"
+        android:hint="yt Luffy, g, d, w..." android:paddingStart="20dp"
+        android:layout_marginBottom="16dp"/>
 </LinearLayout>
