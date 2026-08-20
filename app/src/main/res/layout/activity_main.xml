@@ -1,52 +1,26 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000000">
-    <ImageView android:id="@+id/wallpaperView" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop"/>
-    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="52dp" android:paddingBottom="190dp" android:paddingLeft="14dp" android:paddingRight="14dp" android:overScrollMode="never" android:fillViewport="true">
-        <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
-            <FrameLayout android:id="@+id/glassClock" android:layout_width="match_parent" android:layout_height="110dp" android:background="@drawable/glass_main" android:padding="18dp">
-                <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
-                    <LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
-                        <TextView android:id="@+id/clock" android:text="01:23" android:textColor="#FFF" android:textSize="44sp" android:fontFamily="sans-serif-light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                        <TextView android:id="@+id/date" android:text="MAR. 19 AOÛT • Paris" android:textColor="#99FFFFFF" android:textSize="12sp" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                    </LinearLayout>
-                    <TextView android:id="@+id/batteryInfo" android:text="🔋 100%" android:textColor="#FFF" android:textSize="12sp" android:background="@drawable/btn_glass" android:padding="10dp" android:layout_marginRight="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                    <TextView android:id="@+id/btnBooster" android:text="⚡" android:textSize="14sp" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="10dp" android:layout_marginRight="6dp" android:layout_width="40dp" android:layout_height="40dp" android:gravity="center"/>
-                    <TextView android:id="@+id/btnMenu" android:text="⋮" android:textSize="18sp" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
-                </LinearLayout>
-            </FrameLayout>
-            <FrameLayout android:id="@+id/glassSearch" android:layout_width="match_parent" android:layout_height="54dp" android:background="@drawable/search_glass" android:layout_marginTop="16dp" android:paddingLeft="14dp" android:paddingRight="8dp">
-                <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
-                    <TextView android:text="🔍" android:textSize="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                    <EditText android:id="@+id/searchAppsMain" android:hint="Rechercher apps..." android:textColor="#FFF" android:textColorHint="#88FFFFFF" android:background="@android:color/transparent" android:singleLine="true" android:layout_marginLeft="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent"/>
-                    <TextView android:id="@+id/clearApps" android:text="✕" android:textColor="#88FFFFFF" android:visibility="gone" android:padding="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                </LinearLayout>
-            </FrameLayout>
-            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSuggestions" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:background="@drawable/glass_main" android:padding="8dp" android:layout_marginTop="8dp" android:nestedScrollingEnabled="false"/>
-            <FrameLayout android:id="@+id/glassWeb" android:layout_width="match_parent" android:layout_height="54dp" android:background="@drawable/glass_main" android:layout_marginTop="12dp" android:paddingLeft="14dp" android:paddingRight="8dp">
-                <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="match_parent">
-                    <TextView android:text="🌐" android:textSize="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                    <EditText android:id="@+id/searchWebMain" android:hint="yt Luffy, g, d, w..." android:textColor="#FFF" android:textColorHint="#88FFFFFF" android:background="@android:color/transparent" android:singleLine="true" android:imeOptions="actionSearch" android:layout_marginLeft="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent"/>
-                    <TextView android:id="@+id/btnWebGo" android:text="➤" android:textColor="#FFF" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_marginLeft="8dp" android:layout_width="36dp" android:layout_height="36dp" android:gravity="center"/>
-                </LinearLayout>
-            </FrameLayout>
-            <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-                <TextView android:text="⭐ Favoris" android:textColor="#FFF" android:textSize="13sp" android:textStyle="bold" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/btnAddFav" android:text="+ Site" android:textColor="#FFF" android:textSize="11sp" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_marginRight="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/btnAddFolder" android:text="📁 Dossier" android:textColor="#FFF" android:textSize="11sp" android:background="@drawable/btn_glass" android:padding="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            </LinearLayout>
-            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvFavorites" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:nestedScrollingEnabled="false"/>
-            <TextView android:text="📁 Mes dossiers" android:textColor="#FFF" android:textSize="13sp" android:textStyle="bold" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvFolders" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:nestedScrollingEnabled="false"/>
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
-    <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingBottom="72dp">
-        <LinearLayout android:id="@+id/dock" android:orientation="horizontal" android:gravity="center" android:background="@drawable/glass_dock" android:padding="10dp" android:layout_width="match_parent" android:layout_height="148dp">
-            <ImageView android:id="@+id/dPhone" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
-            <ImageView android:id="@+id/dMsg" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
-            <ImageView android:id="@+id/dExtra" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
-            <FrameLayout android:layout_weight="1" android:layout_width="0dp" android:layout_height="58dp" android:background="@drawable/btn_glass"><ImageView android:id="@+id/dDrawer" android:src="@android:drawable/ic_menu_sort_by_size" android:tint="#FFF" android:layout_gravity="center" android:layout_width="22dp" android:layout_height="22dp"/></FrameLayout>
-            <ImageView android:id="@+id/dCam" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
-            <ImageView android:id="@+id/dChrome" android:padding="10dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="56dp"/>
-        </LinearLayout>
-    </FrameLayout>
-</FrameLayout>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:background="@drawable-nodpi/wallpaper_huntrx"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="11:41 • 20 Août • Paris • HUNTR/X"
+        android:textAlignment="center"
+        android:textSize="20sp"
+        android:textColor="#9B8EC4"
+        android:fontFamily="sans-serif-black"/>
+
+    <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+
+    <EditText android:background="@drawable/search_bar_huntrx"
+        android:layout_width="match_parent" android:layout_height="56dp"
+        android:hint="Rechercher apps..." android:paddingStart="20dp"
+        android:layout_marginBottom="12dp"/>
+
+    <EditText android:background="@drawable/search_bar_huntrx"
+        android:layout_width="match_parent" android:layout_height="56dp"
+        android:hint="yt Luffy, g, d, w..." android:paddingStart="20dp"
+        android:layout_marginBottom="16dp"/>
+</LinearLayout>
