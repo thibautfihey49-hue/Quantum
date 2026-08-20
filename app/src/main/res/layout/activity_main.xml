@@ -38,8 +38,8 @@
             android:textSize="12sp"
             android:textColor="#FFD37F"
             android:letterSpacing="0.08"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="32dp" />
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="12dp" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvFavorites"
@@ -62,7 +62,8 @@
             android:layout_marginTop="8dp">
 
             <EditText
-                android:id="@+id/searchAppsMain"
+                android:translationY="-20dp" -20dp" 20dp"
+        android:id="@+id/searchAppsMain"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
@@ -89,7 +90,8 @@
             android:layout_marginTop="8dp">
 
             <EditText
-                android:id="@+id/searchWebMain"
+                android:translationY="-20dp" -20dp" 20dp"
+        android:id="@+id/searchWebMain"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
@@ -116,7 +118,7 @@
             android:gravity="center"
             android:orientation="horizontal"
             android:layout_marginTop="12dp"
-            android:layout_marginBottom="28dp">
+            android:layout_marginBottom="8dp">
 
             <TextView
                 android:id="@+id/btnAddFav"

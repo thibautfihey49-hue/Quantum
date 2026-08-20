@@ -30,7 +30,7 @@ public class MainActivity extends Activity {
     Handler mainH=new Handler(Looper.getMainLooper());
     String[] dockKeys={"dock_phone","dock_msg","dock_extra","dock_drawer","dock_cam","dock_chrome"};
     String[] defaultPkgs={"com.android.dialer","com.google.android.apps.messaging","com.android.settings","com.v7.quantumfast","com.android.camera2","com.android.chrome"};
-    int 0 // DOCK LOCKED{ int id=getResources().getIdentifier("navigation_bar_height","dimen","android"); return id>0?getResources().getDimensionPixelSize(id):0; }
+    int getNavBarH(){ int id=getResources().getIdentifier("navigation_bar_height","dimen","android"); return id>0?getResources().getDimensionPixelSize(id):0; }
     View findV(String... names){ for(String s:names){ int id=getResources().getIdentifier(s,"id",getPackageName()); if(id!=0){ View v=findViewById(id); if(v!=null) return v; } } return null; }
 
     @Override protected void onCreate(Bundle b){
@@ -51,8 +51,8 @@ public class MainActivity extends Activity {
         View dock=findViewById(R.id.dock);
         if(dock!=null){
             dock.setVisibility(View.VISIBLE);
-            dock.setPadding(0,0,0,0 // DOCK LOCKED-40);
-            try{ ((ViewGroup.MarginLayoutParams)dock.getLayoutParams()).bottomMargin=0 // DOCK LOCKED-40; }catch(Exception e){}
+            dock.setPadding(0,0,0,getNavBarH()-40);
+            try{ ((ViewGroup.MarginLayoutParams)dock.getLayoutParams()).bottomMargin=getNavBarH()-40; }catch(Exception e){}
         }
 
         if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setVisibility(View.GONE); rvSugg.setAdapter(new SuggAdapter()); }
@@ -93,7 +93,7 @@ public class MainActivity extends Activity {
             dlg.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
             LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
             TextView title=new TextView(this); title.setText("✦ QUANTUM • "+src.size()+" APPS"); title.setTextSize(20); title.setTextColor(Color.WHITE); title.setPadding(50,90,40,30); title.setTypeface(null, Typeface.BOLD); title.setLetterSpacing(0.06f); root.addView(title);
-            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(16,16,16, 0 // DOCK LOCKED+24); rv.setClipToPadding(false);
+            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(16,16,16, getNavBarH()+24); rv.setClipToPadding(false);
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
                 public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); return new H(vv); }
@@ -144,7 +144,7 @@ public class MainActivity extends Activity {
             Dialog dlg=new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen); dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
             LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
             TextView title=new TextView(this); title.setText("QUANTUM 5x5 - "+favPkgs.size()+"/25"); title.setTextSize(18); title.setTextColor(Color.WHITE); title.setPadding(50,90,40,30); title.setTypeface(null, Typeface.BOLD); title.setLetterSpacing(0.08f); root.addView(title);
-            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(16,16,16,0 // DOCK LOCKED+14); rv.setClipToPadding(false);
+            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(16,16,16,getNavBarH()+14); rv.setClipToPadding(false);
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
                 public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ View vv=getLayoutInflater().inflate(R.layout.item_app,p,false); return new H(vv); }
