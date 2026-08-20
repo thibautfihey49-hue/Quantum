@@ -3,7 +3,7 @@
 
     <ImageView android:id="@+id/wallpaper" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" />
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:paddingTop="40dp" android:paddingLeft="12dp" android:paddingRight="12dp" android:clipToPadding="false">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:paddingTop="40dp" android:paddingLeft="12dp" android:paddingRight="12dp" android:clipToPadding="false" android:translationY="-20dp">
 
         <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="19:44" android:textSize="34sp" android:textColor="#FFFFFF" android:fontFamily="sans-serif-light" android:letterSpacing="0.05" />
 
@@ -15,14 +15,14 @@
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
 
-            <EditText android:id="@+id/searchAppsMain" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:hint="Rechercher apps..." android:background="@android:color/transparent" android:padding="16dp" android:textColor="#FFFFFF" android:textColorHint="#88FFFFFF" android:singleLine="true" android:translationY="-20dp" />
+            <EditText android:id="@+id/searchAppsMain" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:hint="Rechercher apps..." android:background="@android:color/transparent" android:padding="16dp" android:textColor="#FFFFFF" android:textColorHint="#88FFFFFF" android:singleLine="true" />
 
             <ImageView android:id="@+id/clearApps" android:layout_width="40dp" android:layout_height="40dp" android:src="@android:drawable/ic_menu_close_clear_cancel" android:layout_gravity="center" android:padding="8dp" />
         </LinearLayout>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
 
-            <EditText android:id="@+id/searchWebMain" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:hint="yt Luffy, g, d, w..." android:background="@android:color/transparent" android:padding="16dp" android:textColor="#FFFFFF" android:textColorHint="#88FFFFFF" android:singleLine="true" android:translationY="-20dp" />
+            <EditText android:id="@+id/searchWebMain" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:hint="yt Luffy, g, d, w..." android:background="@android:color/transparent" android:padding="16dp" android:textColor="#FFFFFF" android:textColorHint="#88FFFFFF" android:singleLine="true" />
 
             <TextView android:id="@+id/btnWebGo" android:layout_width="64dp" android:layout_height="56dp" android:text="Go" android:gravity="center" android:textColor="#FFFFFF" android:background="@android:color/transparent" />
         </LinearLayout>
