@@ -49,12 +49,12 @@
 
         <!-- DOCK - c'est ce qui manquait -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="72dp" android:orientation="horizontal" android:gravity="center|bottom" android:layout_marginTop="16dp">
-            <FrameLayout android:id="@+id/dPhone" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@mipmap/ic_launcher"/></FrameLayout>
-            <FrameLayout android:id="@+id/dMsg" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@mipmap/ic_launcher"/></FrameLayout>
-            <FrameLayout android:id="@+id/dExtra" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@mipmap/ic_launcher"/></FrameLayout>
-            <FrameLayout android:id="@+id/dDrawer" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@mipmap/ic_launcher"/></FrameLayout>
-            <FrameLayout android:id="@+id/dCam" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@mipmap/ic_launcher"/></FrameLayout>
-            <FrameLayout android:id="@+id/dChrome" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@mipmap/ic_launcher"/></FrameLayout>
+            <FrameLayout android:id="@+id/dPhone" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@android:drawable/sym_def_app_icon"/></FrameLayout>
+            <FrameLayout android:id="@+id/dMsg" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@android:drawable/sym_def_app_icon"/></FrameLayout>
+            <FrameLayout android:id="@+id/dExtra" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@android:drawable/sym_def_app_icon"/></FrameLayout>
+            <FrameLayout android:id="@+id/dDrawer" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@android:drawable/sym_def_app_icon"/></FrameLayout>
+            <FrameLayout android:id="@+id/dCam" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@android:drawable/sym_def_app_icon"/></FrameLayout>
+            <FrameLayout android:id="@+id/dChrome" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:src="@android:drawable/sym_def_app_icon"/></FrameLayout>
         </LinearLayout>
 
     </LinearLayout>
