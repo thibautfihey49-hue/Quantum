@@ -36,6 +36,7 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
         setContentView(R.layout.activity_main);
+        getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
@@ -51,8 +52,8 @@ public class MainActivity extends Activity {
         View dock=findViewById(R.id.dock);
         if(dock!=null){
             dock.setVisibility(View.VISIBLE);
-            dock.setPadding(0,0,0,getNavBarH()-40);
-            try{ ((ViewGroup.MarginLayoutParams)dock.getLayoutParams()).bottomMargin=getNavBarH()-40; }catch(Exception e){}
+            dock.setPadding(0,0,0,getNavBarH()-40 // DOCK LOCK);
+            try{ ((ViewGroup.MarginLayoutParams)dock.getLayoutParams()).bottomMargin=getNavBarH()-40 // DOCK LOCK; }catch(Exception e){}
         }
 
         if(rvSugg!=null){ rvSugg.setLayoutManager(new LinearLayoutManager(this)); rvSugg.setVisibility(View.GONE); rvSugg.setAdapter(new SuggAdapter()); }
