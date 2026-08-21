@@ -273,7 +273,6 @@ public class MainActivity extends Activity {
 
 
     @Override protected void onResume(){ super.onResume(); if(cachedWallpaperDrawable!=null && mainRoot!=null) mainRoot.setBackground(cachedWallpaperDrawable); else loadWallpaperPersist(); }
-    @Override 
     void refreshFromSystemTheme(){
         try{
             cachedWallpaperDrawable=null; try{ iconCache.evictAll(); }catch(Exception e){} fullCacheReady=false;
