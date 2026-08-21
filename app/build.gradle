@@ -1,13 +1,13 @@
 plugins { id 'com.android.application' }
 android {
     namespace 'com.v7.quantumfast'
-    compileSdk 34
+    compileSdk 33
     defaultConfig {
         applicationId "com.v7.quantumfast"
         minSdk 26
-        targetSdk 34
-        versionCode 999999
-        versionName "PRO-COLOR-FIXED"
+        targetSdk 33
+        versionCode 100
+        versionName "fix"
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -15,7 +15,7 @@ android {
     }
     buildTypes {
         debug { minifyEnabled false }
-        release { minifyEnabled false; shrinkResources false; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
+        release { minifyEnabled false; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
     }
 }
 dependencies {
