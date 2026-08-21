@@ -67,58 +67,20 @@ public class MainActivity extends Activity {
         View men=findV("btnMenu","Menu","menu"); if(men!=null) men.setOnClickListener(v->showMenuModern());
 
         loadFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
-        setupAtAGlance(); preloadMax(); setupDock();
+        
         try{
-            View dockFix=findV("dock","dockBar","dock_container","dockContainer","bottomDock");
+            View dockFix=findV("dock","dockBar","dock_container");
             if(dockFix==null) dockFix=findViewById(R.id.dock);
             if(dockFix!=null){
-                int nbh = getNavBarH();
-                dockFix.setVisibility(View.VISIBLE);
+                int nbh=getNavBarH();
                 dockFix.setPadding(0,0,0,nbh-40);
-                ViewGroup.LayoutParams dlp = dockFix.getLayoutParams();
-                if(dlp instanceof ViewGroup.MarginLayoutParams){
-                    ((ViewGroup.MarginLayoutParams)dlp).bottomMargin = nbh-40;
-                    ((ViewGroup.MarginLayoutParams)dlp).topMargin = 0;
-                }
+                ViewGroup.MarginLayoutParams dlp=(ViewGroup.MarginLayoutParams)dockFix.getLayoutParams();
+                dlp.bottomMargin=nbh-40;
                 dockFix.setLayoutParams(dlp);
-                dockFix.setTranslationY(0);
-                dockFix.bringToFront();
-            }
-        }catch(Exception e){}
-        try{
-            View clockFix=findV("clock","time");
-            View searchEdit = searchApps;
-            if(searchEdit==null) searchEdit = searchWeb;
-            if(clockFix!=null && searchEdit!=null && mainRoot instanceof ViewGroup){
-                View container = null;
-                ViewParent pr = searchEdit.getParent();
-                if(pr instanceof ViewGroup){
-                    ViewParent gp = ((ViewGroup)pr).getParent();
-                    container = (View)(gp instanceof ViewGroup ? gp : pr);
-                }
-                if(container!=null){
-                    ViewGroup oldParent = (ViewGroup)container.getParent();
-                    if(oldParent!=null) oldParent.removeView(container);
-                    View clockTop = clockFix;
-                    while(clockTop!=null && clockTop.getParent()!=mainRoot){
-                        if(clockTop.getParent() instanceof View) clockTop = (View)clockTop.getParent();
-                        else break;
-                    }
-                    ViewGroup main = (ViewGroup)mainRoot;
-                    int idx = -1;
-                    for(int i=0;i<main.getChildCount();i++){ if(main.getChildAt(i)==clockTop){ idx=i; break; } }
-                    if(idx!=-1){
-                        float dens = getResources().getDisplayMetrics().density;
-                        ViewGroup.MarginLayoutParams lp = new ViewGroup.MarginLayoutParams(-1,-2);
-                        lp.topMargin = (int)(20*dens);
-                        container.setLayoutParams(lp);
-                        container.setTranslationY(0);
-                        main.addView(container, idx+1);
-                    }
-                }
             }
         }catch(Exception e){}
 
+        setupAtAGlance(); preloadMax(); setupDock();
         applyGlassTheme(glassPrefs.getInt("glass_color",0xFF7C4DFF));
         if(searchApps!=null) searchApps.addTextChangedListener(new android.text.TextWatcher(){
             public void beforeTextChanged(CharSequence s,int a,int b,int c){}
