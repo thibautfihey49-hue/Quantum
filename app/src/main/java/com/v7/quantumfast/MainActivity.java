@@ -238,6 +238,26 @@ public class MainActivity extends Activity {
             EditText search=new EditText(this); search.setHint("Rechercher..."); search.setTextColor(0xFFFFFFFF); search.setHintTextColor(0xFFAAAAAA); search.setPadding(40,30,40,30); search.setBackgroundColor(0x22FFFFFF);
             RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new LinearLayoutManager(this));
             container.addView(search, new LinearLayout.LayoutParams(-1,-2));
+                try{
+                    android.widget.Button importThemeBtn = new android.widget.Button(this);
+                    importThemeBtn.setText("🎨 Importer thème système Oppo");
+                    importThemeBtn.setTextColor(0xFFFFFFFF);
+                    importThemeBtn.setAllCaps(false);
+                    android.widget.LinearLayout.LayoutParams lp1 = new android.widget.LinearLayout.LayoutParams(-1,-2); lp1.setMargins(0,20,0,0);
+                    importThemeBtn.setLayoutParams(lp1);
+                    importThemeBtn.setOnClickListener(vv->{ try{ refreshFromSystemTheme(); android.widget.Toast.makeText(this,"Thème système importé",0).show(); ((android.app.AlertDialog)container.getTag()).dismiss(); }catch(Exception e){} });
+                    container.addView(importThemeBtn);
+
+                    android.widget.Button addWBtn = new android.widget.Button(this);
+                    addWBtn.setText("✨ Ajouter widget (déplaçable)");
+                    addWBtn.setTextColor(0xFFFFFFFF);
+                    addWBtn.setAllCaps(false);
+                    android.widget.LinearLayout.LayoutParams lp2 = new android.widget.LinearLayout.LayoutParams(-1,-2); lp2.setMargins(0,12,0,0);
+                    addWBtn.setLayoutParams(lp2);
+                    addWBtn.setOnClickListener(vw->{ try{ ((android.app.AlertDialog)container.getTag()).dismiss(); pickWidget(); }catch(Exception e){} });
+                    container.addView(addWBtn);
+                }catch(Exception e){}
+
             container.addView(rv, new LinearLayout.LayoutParams(-1,-1,1f));
             RecyclerView.Adapter ad=new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(1001); lb=v.findViewById(1002);} }
