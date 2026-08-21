@@ -133,7 +133,7 @@ public class MainActivity extends Activity {
         }catch(Exception e){}
     }
     void showMenuModern(){
- float dens=getResources().getDisplayMetrics().density; LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); String[] opts={"🎨 Couleur thème","🖼️ Fond d'écran","🧹 Effacer fond","⭐ Mes apps fusée","📥 Importer thème Oppo","🧩 Widget draggable"}; for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==3) showManualTopPicker(); else if(idx==4) refreshFromSystemTheme(); else if(idx==5) pickWidget(); else { prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findV("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); } }); list.addView(row); } AlertDialog dlg=createModernDialog("Quantum Ultra", list); dlg.show(); }
+ float dens=getResources().getDisplayMetrics().density; LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); String[] opts={"🎨 Couleur thème","🖼️ Fond d'écran","🧹 Effacer fond","⭐ Mes apps fusée","🎨 Thèmes d'icônes gratuits","🔤 Polices + Fonds HD","🧩 Widget draggable"}; for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==3) showManualTopPicker(); else if(idx==4) showIconPackPicker(); else if(idx==5) showFontsWallpapersPicker(); else if(idx==6) pickWidget(); else if(idx==6) pickWidget(); else { prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findV("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); } }); list.addView(row); } AlertDialog dlg=createModernDialog("Quantum Ultra", list); dlg.show(); }
     void showPaletteModern(){ float dens=getResources().getDisplayMetrics().density; GridLayout grid=new GridLayout(this); grid.setColumnCount(5); int[] cols={0xFF7C4DFF,0xFF00E5FF,0xFF00FF94,0xFFFF3D8B,0xFFFFAB00,0xFF6B4C8A,0xFF2196F3,0xFF212121,0xFFFFFFFF}; for(int col:cols){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(56*dens); lp.height=(int)(56*dens); lp.setMargins((int)(8*dens),(int)(8*dens),(int)(8*dens),(int)(8*dens)); v.setLayoutParams(lp); GradientDrawable bg=new GradientDrawable(); bg.setCornerRadius(16*dens); bg.setColor(col); if(col==0xFFFFFFFF) bg.setStroke((int)dens,0xFFCCCCCC); v.setBackground(bg); v.setOnClickListener(vw->{ glassPrefs.edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); grid.addView(v); } AlertDialog dlg=createModernDialog("Thème Ultra", grid); dlg.show(); }
     void pickWallpaper(){ try{ Intent it=new Intent(Intent.ACTION_OPEN_DOCUMENT); it.addCategory(Intent.CATEGORY_OPENABLE); it.setType("image/*"); startActivityForResult(it, 201); }catch(Exception e){ try{ Intent it2=new Intent(Intent.ACTION_PICK); it2.setType("image/*"); startActivityForResult(it2,201); }catch(Exception ee){} } }
     
@@ -203,7 +203,132 @@ public class MainActivity extends Activity {
         makeWidgetDraggable(v);
     }
 
-    void ensureFullCache(){
+    
+    void showIconPackPicker(){
+        try{
+            android.content.Context ctx = getDialogContext();
+            android.widget.LinearLayout list = new android.widget.LinearLayout(ctx);
+            list.setOrientation(android.widget.LinearLayout.VERTICAL);
+            int pad = (int)(getResources().getDisplayMetrics().density*12);
+            android.content.pm.PackageManager pm = getPackageManager();
+            java.util.List<android.content.pm.ResolveInfo> packs = new java.util.ArrayList<>();
+            try{ packs.addAll(pm.queryIntentActivities(new android.content.Intent("org.adw.launcher.THEMES"), 0)); }catch(Exception e){}
+            try{ packs.addAll(pm.queryIntentActivities(new android.content.Intent("com.novalauncher.THEME"), 0)); }catch(Exception e){}
+            try{ packs.addAll(pm.queryIntentActivities(new android.content.Intent("org.adw.launcher.THEMES"), android.content.pm.PackageManager.GET_META_DATA)); }catch(Exception e){}
+
+            if(packs.isEmpty()){
+                android.widget.TextView tv = new android.widget.TextView(ctx);
+                tv.setText("Aucun pack installé\nInstalle un pack gratuit sur Play Store");
+                tv.setTextColor(0xFFFFFFFF); tv.setPadding(pad,pad,pad,pad);
+                list.addView(tv);
+            }
+            java.util.HashSet<String> seen = new java.util.HashSet<>();
+            for(android.content.pm.ResolveInfo ri: packs){
+                String pkg = ri.activityInfo.packageName;
+                if(!seen.add(pkg)) continue;
+                android.widget.TextView row = new android.widget.TextView(ctx);
+                try{ row.setText(ri.loadLabel(pm)); }catch(Exception e){ row.setText(pkg); }
+                row.setTextSize(15); row.setTextColor(0xFFFFFFFF);
+                row.setPadding(pad,pad,pad,pad);
+                row.setOnClickListener(vv->{
+                    prefs.edit().putString("icon_pack", pkg).apply();
+                    android.widget.Toast.makeText(this, "Pack appliqué: "+pkg, 0).show();
+                });
+                list.addView(row);
+            }
+            android.widget.TextView more = new android.widget.TextView(ctx);
+            more.setText("➕ Chercher packs gratuits (Play Store)");
+            more.setTextColor(0xFF00E5FF); more.setPadding(pad,pad*2,pad,pad);
+            more.setOnClickListener(vv->{
+                try{ startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://search?q=free icon pack material you"))); }catch(Exception e){
+                    startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/search?q=free%20icon%20pack%20material%20you")));
+                }
+            });
+            list.addView(more);
+
+            android.widget.ScrollView sv = new android.widget.ScrollView(ctx); sv.addView(list);
+            createModernDialog("Thèmes d'icônes gratuits", sv).show();
+        }catch(Exception e){ android.widget.Toast.makeText(this, "IconPack: "+e.getMessage(), 1).show(); }
+    }
+
+    void showFontsWallpapersPicker(){
+        try{
+            android.content.Context ctx = getDialogContext();
+            android.widget.LinearLayout root = new android.widget.LinearLayout(ctx);
+            root.setOrientation(android.widget.LinearLayout.VERTICAL);
+            int pad = (int)(getResources().getDisplayMetrics().density*12);
+
+            android.widget.TextView h1 = new android.widget.TextView(ctx); h1.setText("🔤 Polices Google (gratuites)"); h1.setTextColor(0xFFFFFFFF); h1.setTextSize(16); h1.setPadding(pad,pad,pad,pad/2); root.addView(h1);
+            String[][] fonts = {
+                {"Poppins","https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Regular.ttf"},
+                {"Montserrat","https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat-Regular.ttf"},
+                {"Nunito","https://github.com/google/fonts/raw/main/ofl/nunito/Nunito-Regular.ttf"},
+                {"Rubik","https://github.com/google/fonts/raw/main/ofl/rubik/Rubik-Regular.ttf"},
+                {"Outfit","https://github.com/google/fonts/raw/main/ofl/outfit/Outfit-Regular.ttf"}
+            };
+            for(String[] f: fonts){
+                android.widget.TextView row = new android.widget.TextView(ctx);
+                row.setText("• "+f[0]); row.setTextColor(0xFFFFFFFF); row.setPadding(pad*2,pad/2,pad,pad/2);
+                row.setOnClickListener(vv->{ downloadFont(f[0], f[1]); });
+                root.addView(row);
+            }
+
+            android.widget.TextView h2 = new android.widget.TextView(ctx); h2.setText("\n🖼️ Fonds HD gratuits"); h2.setTextColor(0xFFFFFFFF); h2.setTextSize(16); h2.setPadding(pad,pad,pad,pad/2); root.addView(h2);
+            String[][] walls = {
+                {"Aléatoire HD (Picsum)","https://picsum.photos/1080/1920"},
+                {"Unsplash aléatoire","https://source.unsplash.com/random/1080x1920"},
+                {"Ouvrir Backdrops / Walli","https://play.google.com/store/search?q=wallpapers%20hd%20free"}
+            };
+            for(String[] w: walls){
+                android.widget.TextView row = new android.widget.TextView(ctx);
+                row.setText("• "+w[0]); row.setTextColor(0xFF00E5FF); row.setPadding(pad*2,pad/2,pad,pad/2);
+                row.setOnClickListener(vv->{
+                    if(w[1].startsWith("https://play")){ try{ startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(w[1])));}catch(Exception e){} }
+                    else { downloadWallpaper(w[1]); }
+                });
+                root.addView(row);
+            }
+
+            android.widget.ScrollView sv = new android.widget.ScrollView(ctx); sv.addView(root);
+            createModernDialog("Polices + Fonds", sv).show();
+        }catch(Exception e){ android.widget.Toast.makeText(this, "Fonts: "+e.getMessage(), 1).show(); }
+    }
+
+    void downloadFont(String name, String url){
+        new Thread(()->{
+            try{
+                java.io.File dir = new java.io.File(getFilesDir(), "fonts"); dir.mkdirs();
+                java.io.File out = new java.io.File(dir, name+".ttf");
+                java.io.InputStream in = new java.net.URL(url).openStream();
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(out);
+                byte[] buf = new byte[8192]; int r; while((r=in.read(buf))!=-1) fos.write(buf,0,r);
+                fos.close(); in.close();
+                runOnUiThread(()->{
+                    prefs.edit().putString("custom_font_path", out.getAbsolutePath()).apply();
+                    android.widget.Toast.makeText(this, "Police "+name+" installée", 0).show();
+                });
+            }catch(Exception e){ runOnUiThread(()-> android.widget.Toast.makeText(this, "Font err: "+e.getMessage(), 1).show()); }
+        }).start();
+    }
+
+    void downloadWallpaper(String url){
+        new Thread(()->{
+            try{
+                java.io.InputStream in = new java.net.URL(url).openStream();
+                android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeStream(in);
+                in.close();
+                runOnUiThread(()->{
+                    try{
+                        android.view.View bg = findV("wallpaper","bg","background","wall");
+                        if(bg instanceof android.widget.ImageView) ((android.widget.ImageView)bg).setImageBitmap(bmp);
+                        android.widget.Toast.makeText(this, "Fond appliqué", 0).show();
+                    }catch(Exception ee){}
+                });
+            }catch(Exception e){ runOnUiThread(()-> android.widget.Toast.makeText(this, "Wall err: "+e.getMessage(), 1).show()); }
+        }).start();
+    }
+
+ void ensureFullCache(){
         try{
             if(fullCacheReady && System.currentTimeMillis()-lastCacheTime<60000){ loadWallpaperPersist(); return; }
             if(allAppsCache.isEmpty()){
