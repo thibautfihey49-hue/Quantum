@@ -1,2 +1,2 @@
-plugins { id 'com.android.application' version '8.1.4' apply false }
+plugins { id 'com.android.application' version '8.9.0' apply false }
 task clean(type: Delete){ delete rootProject.buildDir }
