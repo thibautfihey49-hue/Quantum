@@ -19,9 +19,7 @@ import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
  android.content.BroadcastReceiver mThemeReceiver=null;
- android.appwidget.android.appwidget.AppWidgetHost mAppWidgetHost;
-    android.appwidget.AppWidgetManager awm;
-    AppWidgetManager awm;
+ android.appwidget.AppWidgetManager awm;
  android.appwidget.AppWidgetHost awHost;
  static final int REQ_PICK_WIDGET=1950;
  static final int REQ_CREATE_WIDGET=1951;
@@ -291,7 +289,6 @@ public class MainActivity extends Activity {
             for(String s:ids.split(",")){ try{ int id=Integer.parseInt(s.trim()); android.appwidget.AppWidgetProviderInfo info=awm.getAppWidgetInfo(id); if(info!=null){ android.appwidget.AppWidgetHostView hv=awHost.createView(this,id,info); hv.setAppWidget(id,info); makeDraggable(hv,id); hv.setX(prefs.getInt("wx_"+id,0)); hv.setY(prefs.getInt("wy_"+id,200)); widgetContainer.addView(hv); } }catch(Exception e){} }
         }catch(Exception e){}
     }
-    void addWidgetView(int appWidgetId, android.appwidget.AppWidgetProviderInfo info){ try{ android.appwidget.AppWidgetHostView hv = mAppWidgetHost.createView(this, appWidgetId, info); hv.setAppWidget(appWidgetId, info); android.view.ViewGroup vg = (android.view.ViewGroup) mainRoot; if(vg!=null){ vg.addView(hv); makeDraggable(hv); } }catch(Exception e){ android.widget.Toast.makeText(this,"Add: "+e.getMessage(),1).show(); } }
     void makeDraggable(android.view.View v, int appId){
         final int[] off=new int[2]; final boolean[] dragging={false};
         v.setOnLongClickListener(vv->{ dragging[0]=true; vv.bringToFront(); return true; });
@@ -305,41 +302,15 @@ public class MainActivity extends Activity {
             return true;
         });
     }
-    void pickWidget(){
+    void pickWidget(){ try{ int id=awHost.allocateAppWidgetId(); Intent pick=new Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_PICK); pick.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID,id); startActivityForResult(pick, REQ_PICK_WIDGET); }catch(Exception e){} }
+    void addWidget(int id){
         try{
-            android.appwidget.AppWidgetManager awm = android.appwidget.AppWidgetManager.getInstance(this);
-            java.util.List<android.appwidget.AppWidgetProviderInfo> providers = awm.getInstalledProviders();
-            if(providers.isEmpty()){ android.widget.Toast.makeText(this,"Aucun widget",0).show(); return; }
-            android.content.Context ctx = getDialogContext();
-            android.widget.LinearLayout list = new android.widget.LinearLayout(ctx);
-            list.setOrientation(android.widget.LinearLayout.VERTICAL);
-            int pad = (int)(getResources().getDisplayMetrics().density*12);
-            for(android.appwidget.AppWidgetProviderInfo info: providers){
-                android.widget.TextView row = new android.widget.TextView(ctx);
-                try{ row.setText(info.loadLabel(getPackageManager())); }catch(Exception e){ row.setText(info.provider.getPackageName()); }
-                row.setTextSize(15); row.setTextColor(0xFFFFFFFF);
-                row.setPadding(pad,pad,pad,pad);
-                row.setOnClickListener(vv->{
-                    try{
-                        if(mAppWidgetHost==null){ mAppWidgetHost = new android.appwidget.AppWidgetHost(this, 1); mAppWidgetHost.startListening(); }
-                        int appWidgetId = mAppWidgetHost.allocateAppWidgetId();
-                        boolean bound = awm.bindAppWidgetIdIfAllowed(appWidgetId, info.provider);
-                        if(!bound){
-                            android.content.Intent bi = new android.content.Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_BIND);
-                            bi.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
-                            bi.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider);
-                            startActivityForResult(bi, 9002);
-                        }else{
-                            addWidgetView(appWidgetId, info);
-                        }
-                    }catch(Exception e){ android.widget.Toast.makeText(this,"Widget: "+e.getMessage(),1).show(); }
-                });
-                list.addView(row);
-            }
-            android.widget.ScrollView sv = new android.widget.ScrollView(ctx); sv.addView(list);
-            android.app.AlertDialog dlg = createModernDialog("Choisir widget", sv);
-            dlg.show();
-        }catch(Exception e){ android.widget.Toast.makeText(this,"Widget err: "+e.getMessage(),1).show(); }
+            android.appwidget.AppWidgetProviderInfo info=awm.getAppWidgetInfo(id);
+            android.appwidget.AppWidgetHostView hv=awHost.createView(this,id,info); hv.setAppWidget(id,info);
+            makeDraggable(hv,id); hv.setX(0); hv.setY(200);
+            widgetContainer.addView(hv);
+            String cur=prefs.getString("widgets",""); prefs.edit().putString("widgets", cur.isEmpty()? String.valueOf(id): cur+","+id).apply();
+        }catch(Exception e){}
     }
     protected void onNewIntent
 (Intent intent){ super.onNewIntent(intent); clearSearchNow(); }
