@@ -221,20 +221,69 @@ public class MainActivity extends Activity {
     String resolveIntentPkg(Intent intent){ try{ List<ResolveInfo> r=getPackageManager().queryIntentActivities(intent,0); if(r!=null&&!r.isEmpty()) return r.get(0).activityInfo.packageName; }catch(Exception e){} return null; }
     String getSmartDefault(int idx){ try{ if(idx==0){ String p=resolveIntentPkg(new Intent(Intent.ACTION_DIAL)); if(p!=null) return p;} if(idx==1){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("sms:"))); if(p!=null) return p;} if(idx==2) return "com.android.settings"; if(idx==4){ String p=resolveIntentPkg(new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)); if(p!=null) return p;} if(idx==5){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("http://google.com"))); if(p!=null) return p;} }catch(Exception e){} return defaultPkgs[idx]; }
     
+    
     void setupDock(){
         try{
-            LinearLayout dock=findViewById(R.id.dock); if(dock==null) return;
-            String cur=prefs.getString("dock","");
-            List<String> dockPkgs=new ArrayList<>(); if(cur!=null && !cur.isEmpty()){ for(String s:cur.split(",")) dockPkgs.add(s.trim()); }
-            while(dockPkgs.size()<5) dockPkgs.add("");
-            for(int i=0;i<dock.getChildCount() && i<dockPkgs.size(); i++){
-                View v=dock.getChildAt(i); if(!(v instanceof ImageView)) continue;
-                ImageView iv=(ImageView)v; String pkg=dockPkgs.get(i);
-                if(pkg==null || pkg.isEmpty()){ iv.setImageResource(android.R.drawable.ic_menu_add); }
-                else { try{ Drawable d=iconCache.get(pkg); if(d==null){ Intent it=getPackageManager().getLaunchIntentForPackage(pkg); if(it!=null){ ResolveInfo ri=getPackageManager().resolveActivity(it,0); if(ri!=null) d=ri.loadIcon(getPackageManager()); } } if(d!=null) iv.setImageDrawable(d); }catch(Exception e){} }
-                final int idx=i; iv.setOnLongClickListener(v2->{ pickDockApp(idx); return true; }); iv.setOnClickListener(v2->{ String p=dockPkgs.get(idx); if(p!=null && !p.isEmpty()) launchInstant(p); else pickDockApp(idx); });
+            LinearLayout dock=findViewById(R.id.dock);
+            if(dock==null){
+                // fallback: cherche le container du bas par son background
+                ViewGroup root=findViewById(android.R.id.content);
+                if(root!=null){
+                    // cherche linearLayout en bas
+                    for(int i=0;i<root.getChildCount();i++){
+                        View v=root.getChildAt(i);
+                        if(v instanceof LinearLayout){
+                            // on prend le dernier LinearLayout
+                            dock=(LinearLayout)v;
+                        }
+                    }
+                }
+                if(dock==null) return;
             }
-        }catch(Exception e){}
+            dock.removeAllViews();
+            dock.setVisibility(View.VISIBLE);
+            String cur=prefs.getString("dock","");
+            java.util.List<String> dockPkgs=new java.util.ArrayList<>();
+            if(cur!=null && !cur.isEmpty()){ for(String s:cur.split(",")) dockPkgs.add(s.trim()); }
+            while(dockPkgs.size()<5) dockPkgs.add("");
+            // defaults si tout vide la premiere fois
+            if(dockPkgs.get(0).isEmpty() && dockPkgs.get(1).isEmpty()){
+                try{
+                    Intent tel=new Intent(Intent.ACTION_DIAL); ResolveInfo r=getPackageManager().resolveActivity(tel,0); if(r!=null) dockPkgs.set(0, r.activityInfo.packageName);
+                    Intent sms=new Intent(Intent.ACTION_VIEW); sms.setType("vnd.android-dir/mms-sms"); ResolveInfo r2=getPackageManager().resolveActivity(sms,0); if(r2!=null) dockPkgs.set(1, r2.activityInfo.packageName);
+                }catch(Exception e){}
+                prefs.edit().putString("dock", String.join(",", dockPkgs)).commit();
+            }
+            dock.setOrientation(LinearLayout.HORIZONTAL);
+            dock.setGravity(android.view.Gravity.CENTER);
+            int pad=(int)(12*getResources().getDisplayMetrics().density);
+            dock.setPadding(pad,pad,pad,pad);
+            for(int i=0;i<5;i++){
+                ImageView iv=new ImageView(this);
+                LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0, (int)(56*getResources().getDisplayMetrics().density), 1f);
+                lp.setMargins(pad,0,pad,0);
+                iv.setLayoutParams(lp);
+                iv.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                iv.setBackgroundResource(android.R.drawable.btn_default);
+                String pkg=i<dockPkgs.size()?dockPkgs.get(i):"";
+                if(pkg==null || pkg.isEmpty()){
+                    iv.setImageResource(android.R.drawable.ic_menu_add);
+                }else{
+                    try{
+                        Drawable d=iconCache.get(pkg);
+                        if(d==null){
+                            Intent it=getPackageManager().getLaunchIntentForPackage(pkg);
+                            if(it!=null){ ResolveInfo ri=getPackageManager().resolveActivity(it,0); if(ri!=null) d=ri.loadIcon(getPackageManager()); }
+                        }
+                        if(d!=null) iv.setImageDrawable(d); else iv.setImageResource(android.R.drawable.sym_def_app_icon);
+                    }catch(Exception e){ iv.setImageResource(android.R.drawable.sym_def_app_icon); }
+                }
+                final int idx=i;
+                iv.setOnClickListener(v->{ String p=dockPkgs.get(idx); if(p!=null && !p.isEmpty()) launchInstant(p); else pickDockApp(idx); });
+                iv.setOnLongClickListener(v->{ pickDockApp(idx); return true; });
+                dock.addView(iv);
+            }
+        }catch(Exception e){ e.printStackTrace(); }
     }
     String findRealPkg(String pkg){ if(pkg==null) return null; try{ getPackageManager().getPackageInfo(pkg,0); return pkg; }catch(Exception e){ return null; } }
     void updateDockIcon(ImageView iv, String pkg){ try{ Drawable c=iconCache.get(pkg); if(c!=null) iv.setImageDrawable(c); else iv.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); }catch(Exception e){ iv.setImageResource(android.R.drawable.sym_def_app_icon); } }
