@@ -5,7 +5,8 @@
     android:layout_height="match_parent"
     android:background="#000000">
     <ImageView android:id="@+id/wallpaper" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" />
-    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:paddingTop="40dp" android:paddingLeft="12dp" android:paddingRight="12dp" android:clipToPadding="false">
+    <!-- CONTENU SCROLLABLE SANS DOCK -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:paddingTop="40dp" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingBottom="80dp" android:clipToPadding="false">
         <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="19:44" android:textSize="34sp" android:textColor="#FFFFFF" android:fontFamily="sans-serif-light" android:letterSpacing="0.05" />
         <TextView android:id="@+id/dateInfo" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="JEU. 20 AOÛT • Paris" android:textSize="12sp" android:textColor="#FFD37F" android:letterSpacing="0.08" android:layout_marginTop="2dp" android:layout_marginBottom="0dp" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="20dp">
@@ -22,13 +23,14 @@
             <TextView android:id="@+id/btnAddFav" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fav" android:textColor="#FFFFFF" android:padding="12dp" android:textSize="16sp" />
             <TextView android:id="@+id/btnMenu" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Menu" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginLeft="24dp" android:textSize="16sp" />
         </LinearLayout>
-        <LinearLayout android:id="@+id/dock" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center" android:padding="8dp" android:clipToPadding="false">
-            <FrameLayout android:id="@+id/dPhone" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
-            <FrameLayout android:id="@+id/dMsg" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
-            <FrameLayout android:id="@+id/dExtra" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
-            <FrameLayout android:id="@+id/dDrawer" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
-            <FrameLayout android:id="@+id/dCam" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
-            <FrameLayout android:id="@+id/dChrome" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
-        </LinearLayout>
+    </LinearLayout>
+    <!-- DOCK VRAIMENT BLOQUE EN BAS DU ROOT - HORS LINEARLAYOUT -->
+    <LinearLayout android:id="@+id/dock" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:orientation="horizontal" android:gravity="center" android:padding="8dp" android:clipToPadding="false">
+        <FrameLayout android:id="@+id/dPhone" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
+        <FrameLayout android:id="@+id/dMsg" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
+        <FrameLayout android:id="@+id/dExtra" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
+        <FrameLayout android:id="@+id/dDrawer" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
+        <FrameLayout android:id="@+id/dCam" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
+        <FrameLayout android:id="@+id/dChrome" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
     </LinearLayout>
 </FrameLayout>
