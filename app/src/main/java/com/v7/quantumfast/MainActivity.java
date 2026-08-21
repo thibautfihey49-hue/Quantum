@@ -71,7 +71,7 @@ public class MainActivity extends Activity {
         View favBtn=findV("btnAddFav","Fav","fav"); if(favBtn!=null) favBtn.setOnClickListener(v->showAddFavDialog());
         View men=findV("btnMenu","Menu","menu"); if(men!=null) men.setOnClickListener(v->showMenuModern());
 
-        loadFavs(); loadManualTop(); askDefaultLauncher(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
+        loadFavs(); loadManualTop(); loadWallpaperPersist(); askDefaultLauncher(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
         setupAtAGlance(); preloadMax(); setupDock();
         applyGlassTheme(glassPrefs.getInt("glass_color",0xFF7C4DFF));
         if(searchApps!=null) searchApps.addTextChangedListener(new android.text.TextWatcher(){
@@ -185,8 +185,38 @@ public class MainActivity extends Activity {
     }
 
 
-    @Override protected void onResume(){ super.onResume(); clearSearchNow(); }
+    @Override protected void onResume(){ super.onResume(); loadWallpaperPersist(); clearSearchNow(); }
     @Override protected void onNewIntent(Intent intent){ super.onNewIntent(intent); clearSearchNow(); }
+    
+    void loadWallpaperPersist(){
+        try{
+            String saved=prefs.getString("wallpaper_file","");
+            java.io.File f=null;
+            if(!saved.isEmpty()) f=new java.io.File(saved);
+            if(f==null ||!f.exists()){
+                java.io.File internal=new java.io.File(getFilesDir(),"quantum_wall.jpg");
+                if(internal.exists()) f=internal;
+            }
+            if(f!=null && f.exists()){
+                android.graphics.drawable.Drawable d=android.graphics.drawable.Drawable.createFromPath(f.getAbsolutePath());
+                if(d!=null){
+                    if(mainRoot!=null) mainRoot.setBackground(d);
+                    else getWindow().setBackgroundDrawable(d);
+                }
+            }
+        }catch(Exception e){}
+    }
+    void saveWallpaperPersist(android.net.Uri uri){
+        try{
+            java.io.InputStream in=getContentResolver().openInputStream(uri);
+            java.io.File out=new java.io.File(getFilesDir(),"quantum_wall.jpg");
+            java.io.OutputStream os=new java.io.FileOutputStream(out);
+            byte[] buf=new byte[8192]; int r; while((r=in.read(buf))!=-1) os.write(buf,0,r);
+            in.close(); os.close();
+            prefs.edit().putString("wallpaper_file", out.getAbsolutePath()).commit();
+            loadWallpaperPersist();
+        }catch(Exception e){}
+    }
     void setupAtAGlance(){ TextView c=findViewById(R.id.clock); TextView d=findViewById(R.id.dateInfo); SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE); SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE); Runnable r=new Runnable(){public void run(){ try{ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); }catch(Exception e){} if(mainRoot!=null) mainRoot.postDelayed(this,30000); }}; r.run(); }
     String resolveIntentPkg(Intent intent){ try{ List<ResolveInfo> r=getPackageManager().queryIntentActivities(intent,0); if(r!=null&&!r.isEmpty()) return r.get(0).activityInfo.packageName; }catch(Exception e){} return null; }
     String getSmartDefault(int idx){ try{ if(idx==0){ String p=resolveIntentPkg(new Intent(Intent.ACTION_DIAL)); if(p!=null) return p;} if(idx==1){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("sms:"))); if(p!=null) return p;} if(idx==2) return "com.android.settings"; if(idx==4){ String p=resolveIntentPkg(new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)); if(p!=null) return p;} if(idx==5){ String p=resolveIntentPkg(new Intent(Intent.ACTION_VIEW, Uri.parse("http://google.com"))); if(p!=null) return p;} }catch(Exception e){} return defaultPkgs[idx]; }
