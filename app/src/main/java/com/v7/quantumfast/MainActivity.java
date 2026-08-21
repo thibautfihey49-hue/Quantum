@@ -49,8 +49,8 @@ public class MainActivity extends Activity {
     View findV(String... names){ for(String s:names){ int id=getResources().getIdentifier(s,"id",getPackageName()); if(id!=0){ View v=findViewById(id); if(v!=null) return v; } } return null; }
 
     @Override protected void onCreate(Bundle b){
-        if(mAppWidgetHost==null){ mAppWidgetHost = new android.appwidget.AppWidgetHost(this, 1); mAppWidgetHost.startListening(); }
         super.onCreate(b);
+        if(mAppWidgetHost==null){ mAppWidgetHost = new android.appwidget.AppWidgetHost(this, 1); mAppWidgetHost.startListening(); awHost=mAppWidgetHost; }
         setContentView(R.layout.activity_main);
         try{ java.io.File wf=new java.io.File(getFilesDir(),"quantum_wall.jpg"); if(wf.exists()){ android.graphics.drawable.Drawable wd=android.graphics.drawable.Drawable.createFromPath(wf.getAbsolutePath()); if(wd!=null){ cachedWallpaperDrawable=wd; getWindow().setBackgroundDrawable(wd); if(mainRoot!=null) mainRoot.setBackground(wd); } } }catch(Exception e){}
         try{
@@ -133,7 +133,7 @@ public class MainActivity extends Activity {
         }catch(Exception e){}
     }
     void showMenuModern(){
- float dens=getResources().getDisplayMetrics().density; LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); String[] opts={"🎨 Couleur thème","🖼️ Fond d'écran","🧹 Effacer fond","⭐ Mes apps fusée"}; for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==3) showManualTopPicker(); else { prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findV("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); } }); list.addView(row); } AlertDialog dlg=createModernDialog("Quantum Ultra", list); dlg.show(); }
+ float dens=getResources().getDisplayMetrics().density; LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); String[] opts={"🎨 Couleur thème","🖼️ Fond d'écran","🧹 Effacer fond","⭐ Mes apps fusée","📥 Importer thème Oppo","🧩 Widget draggable"}; for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==3) showManualTopPicker(); else if(idx==4) refreshFromSystemTheme(); else if(idx==5) pickWidget(); else { prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findV("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); } }); list.addView(row); } AlertDialog dlg=createModernDialog("Quantum Ultra", list); dlg.show(); }
     void showPaletteModern(){ float dens=getResources().getDisplayMetrics().density; GridLayout grid=new GridLayout(this); grid.setColumnCount(5); int[] cols={0xFF7C4DFF,0xFF00E5FF,0xFF00FF94,0xFFFF3D8B,0xFFFFAB00,0xFF6B4C8A,0xFF2196F3,0xFF212121,0xFFFFFFFF}; for(int col:cols){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(56*dens); lp.height=(int)(56*dens); lp.setMargins((int)(8*dens),(int)(8*dens),(int)(8*dens),(int)(8*dens)); v.setLayoutParams(lp); GradientDrawable bg=new GradientDrawable(); bg.setCornerRadius(16*dens); bg.setColor(col); if(col==0xFFFFFFFF) bg.setStroke((int)dens,0xFFCCCCCC); v.setBackground(bg); v.setOnClickListener(vw->{ glassPrefs.edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); grid.addView(v); } AlertDialog dlg=createModernDialog("Thème Ultra", grid); dlg.show(); }
     void pickWallpaper(){ try{ Intent it=new Intent(Intent.ACTION_OPEN_DOCUMENT); it.addCategory(Intent.CATEGORY_OPENABLE); it.setType("image/*"); startActivityForResult(it, 201); }catch(Exception e){ try{ Intent it2=new Intent(Intent.ACTION_PICK); it2.setType("image/*"); startActivityForResult(it2,201); }catch(Exception ee){} } }
     
@@ -143,19 +143,18 @@ public class MainActivity extends Activity {
         try{
             android.appwidget.AppWidgetManager awm = android.appwidget.AppWidgetManager.getInstance(this);
             java.util.List<android.appwidget.AppWidgetProviderInfo> providers = awm.getInstalledProviders();
-            if(providers.isEmpty()){ android.widget.Toast.makeText(this,"Aucun widget trouvé",0).show(); return; }
+            if(providers.isEmpty()){ android.widget.Toast.makeText(this,"Aucun widget",0).show(); return; }
             android.content.Context ctx = getDialogContext();
             android.widget.LinearLayout list = new android.widget.LinearLayout(ctx);
             list.setOrientation(android.widget.LinearLayout.VERTICAL);
             int pad = (int)(getResources().getDisplayMetrics().density*12);
             if(mAppWidgetHost==null){ mAppWidgetHost = new android.appwidget.AppWidgetHost(this, 1); mAppWidgetHost.startListening(); }
+            awHost = mAppWidgetHost;
             for(android.appwidget.AppWidgetProviderInfo info: providers){
                 android.widget.TextView row = new android.widget.TextView(ctx);
                 try{ row.setText(info.loadLabel(getPackageManager())); }catch(Exception e){ row.setText(info.provider.getPackageName()); }
                 row.setTextSize(15); row.setTextColor(0xFFFFFFFF);
                 row.setPadding(pad,pad,pad,pad);
-                row.setBackgroundColor(0x22FFFFFF);
-                android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,pad/2); row.setLayoutParams(lp);
                 row.setOnClickListener(vv->{
                     try{
                         int appWidgetId = mAppWidgetHost.allocateAppWidgetId();
@@ -196,6 +195,12 @@ public class MainActivity extends Activity {
                 return false;
             }
         });
+    }
+    void makeDraggable(android.view.View v, int id){
+        makeWidgetDraggable(v);
+    }
+    void makeDraggable(android.view.View v){
+        makeWidgetDraggable(v);
     }
 
     void ensureFullCache(){
