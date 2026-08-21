@@ -9,7 +9,7 @@ public class RecentsHookService extends AccessibilityService {
    if(event.getEventType()==AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED){
     String pkg = event.getPackageName()!=null?event.getPackageName().toString():"";
     String cls = event.getClassName()!=null?event.getClassName().toString():"";
-    if(pkg.contains("systemui") && (cls.toLowerCase().contains("recents") || cls.toLowerCase().contains("recent")){
+    if(pkg.contains("systemui") && (cls.toLowerCase().contains("recents") || cls.toLowerCase().contains("recent"))){
      Intent i=new Intent(this, MainActivity.class);
      i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
      i.putExtra("showGrid",true);
