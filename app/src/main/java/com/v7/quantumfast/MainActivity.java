@@ -107,7 +107,7 @@ public class MainActivity extends Activity {
     }
 
     GradientDrawable glassBg(int col,float rad,int alpha){ int fill=Color.argb(alpha, Color.red(col), Color.green(col), Color.blue(col)); GradientDrawable d=new GradientDrawable(); d.setShape(0); d.setCornerRadius(rad); d.setColor(fill); d.setStroke((int)(1.2f*getResources().getDisplayMetrics().density), Color.argb(90,255,255,255)); return d; }
-    AlertDialog createModernDialog(String title, View content){ float dens=getResources().getDisplayMetrics().density; LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding((int)(20*dens),(int)(20*dens),(int)(20*dens),(int)(16*dens)); root.setBackground(glassBg(glassPrefs.getInt("glass_color",0xFF7C4DFF), 24*dens, 96)); TextView tv=new TextView(this); tv.setText(title); tv.setTextSize(18); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); tv.setPadding(0,0,0,(int)(12*dens)); root.addView(tv); if(content!=null) root.addView(content); AlertDialog dlg=new AlertDialog.Builder(this).setView(root).create(); if(dlg.getWindow()!=null) dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT)); return dlg; }
+    AlertDialog createModernDialog(String title, View content){ float dens=getResources().getDisplayMetrics().density; LinearLayout root=new LinearLayout(getDialogContext()); root.setOrientation(LinearLayout.VERTICAL); root.setPadding((int)(20*dens),(int)(20*dens),(int)(20*dens),(int)(16*dens)); root.setBackground(glassBg(glassPrefs.getInt("glass_color",0xFF7C4DFF), 24*dens, 96)); TextView tv=new TextView(getDialogContext()); tv.setText(title); tv.setTextSize(18); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); tv.setPadding(0,0,0,(int)(12*dens)); root.addView(tv); if(content!=null) root.addView(content); AlertDialog dlg=new AlertDialog.Builder(getDialogContext()).setView(root).create(); if(dlg.getWindow()!=null) dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT)); return dlg; }
     
     void showAppDrawer(){
         try{
@@ -115,7 +115,7 @@ public class MainActivity extends Activity {
             LinkedHashMap<String, ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:base) map.putIfAbsent(ri.activityInfo.packageName, ri);
             final List<ResolveInfo> uniq= cachedUniqApps.isEmpty()? new ArrayList<>(map.values()) : cachedUniqApps;
             final List<ResolveInfo> filtered=new ArrayList<>(uniq);
-            LinearLayout container=new LinearLayout(this); container.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout container=new LinearLayout(getDialogContext()); container.setOrientation(LinearLayout.VERTICAL);
             EditText search=new EditText(this); search.setHint("Rechercher..."); search.setTextColor(0xFFFFFFFF); search.setHintTextColor(0xFFAAAAAA); search.setPadding(40,30,40,30); search.setBackgroundColor(0x22FFFFFF);
             RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new LinearLayoutManager(this)); rv.setHasFixedSize(true);
             container.addView(search, new LinearLayout.LayoutParams(-1,-2));
@@ -132,10 +132,11 @@ public class MainActivity extends Activity {
         }catch(Exception e){}
     }
     void showMenuModern(){
- float dens=getResources().getDisplayMetrics().density; LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); String[] opts={"🎨 Couleur thème","🖼️ Fond d'écran","🧹 Effacer fond","⭐ Mes apps fusée","📥 Importer thème Oppo","🧩 Widget draggable"}; for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==3) showManualTopPicker(); else if(idx==4) refreshFromSystemTheme(); else if(idx==5) pickWidget(); else { prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findV("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); } }); list.addView(row); } AlertDialog dlg=createModernDialog("Quantum Ultra", list); dlg.show(); }
-    void showPaletteModern(){ float dens=getResources().getDisplayMetrics().density; GridLayout grid=new GridLayout(this); grid.setColumnCount(5); int[] cols={0xFF7C4DFF,0xFF00E5FF,0xFF00FF94,0xFFFF3D8B,0xFFFFAB00,0xFF6B4C8A,0xFF2196F3,0xFF212121,0xFFFFFFFF}; for(int col:cols){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(56*dens); lp.height=(int)(56*dens); lp.setMargins((int)(8*dens),(int)(8*dens),(int)(8*dens),(int)(8*dens)); v.setLayoutParams(lp); GradientDrawable bg=new GradientDrawable(); bg.setCornerRadius(16*dens); bg.setColor(col); if(col==0xFFFFFFFF) bg.setStroke((int)dens,0xFFCCCCCC); v.setBackground(bg); v.setOnClickListener(vw->{ glassPrefs.edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); grid.addView(v); } AlertDialog dlg=createModernDialog("Thème Ultra", grid); dlg.show(); }
+ float dens=getResources().getDisplayMetrics().density; LinearLayout list=new LinearLayout(getDialogContext()); list.setOrientation(LinearLayout.VERTICAL); String[] opts={"🎨 Couleur thème","🖼️ Fond d'écran","🧹 Effacer fond","⭐ Mes apps fusée","📥 Importer thème Oppo","🧩 Widget draggable"}; for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(getDialogContext()); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==3) showManualTopPicker(); else if(idx==4) refreshFromSystemTheme(); else if(idx==5) pickWidget(); else { prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findV("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); } }); list.addView(row); } AlertDialog dlg=createModernDialog("Quantum Ultra", list); dlg.show(); }
+    void showPaletteModern(){ float dens=getResources().getDisplayMetrics().density; GridLayout grid=new GridLayout(getDialogContext()); grid.setColumnCount(5); int[] cols={0xFF7C4DFF,0xFF00E5FF,0xFF00FF94,0xFFFF3D8B,0xFFFFAB00,0xFF6B4C8A,0xFF2196F3,0xFF212121,0xFFFFFFFF}; for(int col:cols){ View v=new View(this); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=(int)(56*dens); lp.height=(int)(56*dens); lp.setMargins((int)(8*dens),(int)(8*dens),(int)(8*dens),(int)(8*dens)); v.setLayoutParams(lp); GradientDrawable bg=new GradientDrawable(); bg.setCornerRadius(16*dens); bg.setColor(col); if(col==0xFFFFFFFF) bg.setStroke((int)dens,0xFFCCCCCC); v.setBackground(bg); v.setOnClickListener(vw->{ glassPrefs.edit().putInt("glass_color",col).apply(); applyGlassTheme(col); }); grid.addView(v); } AlertDialog dlg=createModernDialog("Thème Ultra", grid); dlg.show(); }
     void pickWallpaper(){ try{ Intent it=new Intent(Intent.ACTION_OPEN_DOCUMENT); it.addCategory(Intent.CATEGORY_OPENABLE); it.setType("image/*"); startActivityForResult(it, 201); }catch(Exception e){ try{ Intent it2=new Intent(Intent.ACTION_PICK); it2.setType("image/*"); startActivityForResult(it2,201); }catch(Exception ee){} } }
     
+    android.content.Context getDialogContext(){ return new android.view.ContextThemeWrapper(this, android.R.style.Theme_Material_Light_Dialog_Alert); }
     void ensureFullCache(){
         try{
             if(fullCacheReady && System.currentTimeMillis()-lastCacheTime<60000){ loadWallpaperPersist(); return; }
@@ -171,8 +172,8 @@ public class MainActivity extends Activity {
             Dialog dlg=new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
             dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
             dlg.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
-            LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
-            TextView title=new TextView(this); title.setText("✦ QUANTUM • "+src.size()+" APPS"); title.setTextSize(20); title.setTextColor(Color.WHITE); title.setPadding(50,90,40,30); title.setTypeface(null, Typeface.BOLD); title.setLetterSpacing(0.06f); root.addView(title);
+            LinearLayout root=new LinearLayout(getDialogContext()); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
+            TextView title=new TextView(getDialogContext()); title.setText("✦ QUANTUM • "+src.size()+" APPS"); title.setTextSize(20); title.setTextColor(Color.WHITE); title.setPadding(50,90,40,30); title.setTypeface(null, Typeface.BOLD); title.setLetterSpacing(0.06f); root.addView(title);
             RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(16,16,16, getNavBarH()+24); rv.setClipToPadding(false);
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
@@ -197,8 +198,8 @@ public class MainActivity extends Activity {
             Intent home=new Intent(Intent.ACTION_MAIN); home.addCategory(Intent.CATEGORY_HOME); home.addCategory(Intent.CATEGORY_DEFAULT);
             ResolveInfo def=getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY);
             if(def!=null && !def.activityInfo.packageName.equals(getPackageName())){
-                LinearLayout lay=new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); lay.setPadding(60,40,60,20);
-                TextView tv=new TextView(this); tv.setText("Définir Quantum comme launcher par défaut pour un lancement instantané ?"); tv.setTextColor(Color.WHITE); tv.setTextSize(15); tv.setPadding(0,0,0,30);
+                LinearLayout lay=new LinearLayout(getDialogContext()); lay.setOrientation(LinearLayout.VERTICAL); lay.setPadding(60,40,60,20);
+                TextView tv=new TextView(getDialogContext()); tv.setText("Définir Quantum comme launcher par défaut pour un lancement instantané ?"); tv.setTextColor(Color.WHITE); tv.setTextSize(15); tv.setPadding(0,0,0,30);
                 lay.addView(tv);
                 android.widget.Button b1=new android.widget.Button(this); b1.setText("DEFINIR MAINTENANT");
                 android.widget.Button b2=new android.widget.Button(this); b2.setText("Plus tard");
@@ -234,7 +235,7 @@ public class MainActivity extends Activity {
             final List<ResolveInfo> uniq=new ArrayList<>(map.values());
             Collections.sort(uniq,(a,b)-> (labelCache.containsKey(a.activityInfo.packageName)?labelCache.get(a.activityInfo.packageName):a.loadLabel(getPackageManager()).toString()).compareToIgnoreCase(labelCache.containsKey(b.activityInfo.packageName)?labelCache.get(b.activityInfo.packageName):b.loadLabel(getPackageManager()).toString()));
             final List<ResolveInfo> filtered=new ArrayList<>(uniq);
-            LinearLayout container=new LinearLayout(this); container.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout container=new LinearLayout(getDialogContext()); container.setOrientation(LinearLayout.VERTICAL);
             EditText search=new EditText(this); search.setHint("Rechercher..."); search.setTextColor(0xFFFFFFFF); search.setHintTextColor(0xFFAAAAAA); search.setPadding(40,30,40,30); search.setBackgroundColor(0x22FFFFFF);
             RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new LinearLayoutManager(this));
             container.addView(search, new LinearLayout.LayoutParams(-1,-2));
@@ -301,16 +302,28 @@ public class MainActivity extends Activity {
             return true;
         });
     }
-    void pickWidget(){ try{ int id=awHost.allocateAppWidgetId(); Intent pick=new Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_PICK); pick.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID,id); startActivityForResult(pick, REQ_PICK_WIDGET); }catch(Exception e){} }
-    void addWidget(int id){
+    
+    
+    void addWidgetView(int appWidgetId, android.appwidget.AppWidgetProviderInfo info){
         try{
-            android.appwidget.AppWidgetProviderInfo info=awm.getAppWidgetInfo(id);
-            android.appwidget.AppWidgetHostView hv=awHost.createView(this,id,info); hv.setAppWidget(id,info);
-            makeDraggable(hv,id); hv.setX(0); hv.setY(200);
-            widgetContainer.addView(hv);
-            String cur=prefs.getString("widgets",""); prefs.edit().putString("widgets", cur.isEmpty()? String.valueOf(id): cur+","+id).apply();
-        }catch(Exception e){}
+            android.appwidget.AppWidgetHostView hv = mAppWidgetHost.createView(this, appWidgetId, info);
+            hv.setAppWidget(appWidgetId, info);
+            if(mainRoot!=null){ mainRoot.addView(hv); makeDraggable(hv); }
+        }catch(Exception e){ android.widget.Toast.makeText(this,"Add: "+e.getMessage(),1).show(); }
     }
+    void makeDraggable(android.view.View v){
+        v.setOnTouchListener(new android.view.View.OnTouchListener(){
+            float dx, dy;
+            public boolean onTouch(android.view.View vv, android.view.MotionEvent ev){
+                switch(ev.getAction()){
+                    case android.view.MotionEvent.ACTION_DOWN: dx=vv.getX()-ev.getRawX(); dy=vv.getY()-ev.getRawY(); break;
+                    case android.view.MotionEvent.ACTION_MOVE: vv.setX(ev.getRawX()+dx); vv.setY(ev.getRawY()+dy); break;
+                }
+                return true;
+            }
+        });
+    }
+
     protected void onNewIntent
 (Intent intent){ super.onNewIntent(intent); clearSearchNow(); }
     
@@ -406,8 +419,8 @@ public class MainActivity extends Activity {
             List<ResolveInfo> tmp=allAppsCache; if(tmp.isEmpty()){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);} tmp=new ArrayList<>(map.values()); }
             final List<ResolveInfo> src=tmp;
             Dialog dlg=new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen); dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
-            LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
-            TextView title=new TextView(this); title.setText("QUANTUM 5x5 - "+favPkgs.size()+"/25"); title.setTextSize(18); title.setTextColor(Color.WHITE); title.setPadding(50,90,40,30); title.setTypeface(null, Typeface.BOLD); title.setLetterSpacing(0.08f); root.addView(title);
+            LinearLayout root=new LinearLayout(getDialogContext()); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
+            TextView title=new TextView(getDialogContext()); title.setText("QUANTUM 5x5 - "+favPkgs.size()+"/25"); title.setTextSize(18); title.setTextColor(Color.WHITE); title.setPadding(50,90,40,30); title.setTypeface(null, Typeface.BOLD); title.setLetterSpacing(0.08f); root.addView(title);
             RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,5)); rv.setPadding(16,16,16,getNavBarH()+14); rv.setClipToPadding(false);
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
