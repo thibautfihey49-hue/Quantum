@@ -68,39 +68,38 @@ public class MainActivity extends Activity {
 
         loadFavs(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
         setupAtAGlance(); preloadMax(); setupDock();
-        // DOCK LOCK -40 ORIGINE TOUT LE TEMPS
         try{
-            View dock=findViewGlass("dock","dockBar","dock_container","dockContainer","bottomDock");
-            if(dock!=null){
+            View dockFix=findV("dock","dockBar","dock_container","dockContainer","bottomDock");
+            if(dockFix==null) dockFix=findViewById(R.id.dock);
+            if(dockFix!=null){
                 int nbh = getNavBarH();
-                dock.setVisibility(View.VISIBLE);
-                dock.setPadding(0,0,0,nbh-40);
-                ViewGroup.LayoutParams dlp = dock.getLayoutParams();
+                dockFix.setVisibility(View.VISIBLE);
+                dockFix.setPadding(0,0,0,nbh-40);
+                ViewGroup.LayoutParams dlp = dockFix.getLayoutParams();
                 if(dlp instanceof ViewGroup.MarginLayoutParams){
                     ((ViewGroup.MarginLayoutParams)dlp).bottomMargin = nbh-40;
                     ((ViewGroup.MarginLayoutParams)dlp).topMargin = 0;
                 }
-                dock.setLayoutParams(dlp);
-                dock.setTranslationY(0);
-                dock.bringToFront();
+                dockFix.setLayoutParams(dlp);
+                dockFix.setTranslationY(0);
+                dockFix.bringToFront();
             }
         }catch(Exception e){}
-        // SEARCH 20dp SOUS 01:10
         try{
-            View clock=findViewGlass("clock","time");
+            View clockFix=findV("clock","time");
             View searchEdit = searchApps;
             if(searchEdit==null) searchEdit = searchWeb;
-            if(clock!=null && searchEdit!=null && mainRoot instanceof ViewGroup){
+            if(clockFix!=null && searchEdit!=null && mainRoot instanceof ViewGroup){
                 View container = null;
-                ViewParent p = searchEdit.getParent();
-                if(p instanceof ViewGroup){
-                    ViewParent gp = ((ViewGroup)p).getParent();
-                    container = (View)(gp instanceof ViewGroup ? gp : p);
+                ViewParent pr = searchEdit.getParent();
+                if(pr instanceof ViewGroup){
+                    ViewParent gp = ((ViewGroup)pr).getParent();
+                    container = (View)(gp instanceof ViewGroup ? gp : pr);
                 }
                 if(container!=null){
                     ViewGroup oldParent = (ViewGroup)container.getParent();
                     if(oldParent!=null) oldParent.removeView(container);
-                    View clockTop = clock;
+                    View clockTop = clockFix;
                     while(clockTop!=null && clockTop.getParent()!=mainRoot){
                         if(clockTop.getParent() instanceof View) clockTop = (View)clockTop.getParent();
                         else break;
