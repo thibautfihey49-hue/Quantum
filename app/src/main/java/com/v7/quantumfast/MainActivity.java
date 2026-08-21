@@ -93,8 +93,8 @@ public class MainActivity extends Activity {
         try{
             List<ResolveInfo> base = allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache;
             LinkedHashMap<String, ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:base) map.putIfAbsent(ri.activityInfo.packageName, ri);
-            List<ResolveInfo> uniq = cachedUniqApps.isEmpty()? new ArrayList<>(map.values()) : cachedUniqApps;
-            List<ResolveInfo> filtered=new ArrayList<>(uniq);
+            final List<ResolveInfo> uniq= cachedUniqApps.isEmpty()? new ArrayList<>(map.values()) : cachedUniqApps;
+            final List<ResolveInfo> filtered=new ArrayList<>(uniq);
             LinearLayout container=new LinearLayout(this); container.setOrientation(LinearLayout.VERTICAL);
             EditText search=new EditText(this); search.setHint("Rechercher..."); search.setTextColor(0xFFFFFFFF); search.setHintTextColor(0xFFAAAAAA); search.setPadding(40,30,40,30); search.setBackgroundColor(0x22FFFFFF);
             RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new LinearLayoutManager(this)); rv.setHasFixedSize(true);
@@ -194,7 +194,7 @@ public class MainActivity extends Activity {
         try{
             List<ResolveInfo> apps=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache;
             LinkedHashMap<String, ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:apps){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName, ri); }
-            List<ResolveInfo> uniq=new ArrayList<>(map.values());
+            final List<ResolveInfo> uniq=new ArrayList<>(map.values());
             Collections.sort(uniq,(a,b)->a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString()));
             RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new LinearLayoutManager(this));
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
@@ -211,9 +211,9 @@ public class MainActivity extends Activity {
         try{
             List<ResolveInfo> apps=getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0);
             LinkedHashMap<String, ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:apps){ map.putIfAbsent(ri.activityInfo.packageName, ri); }
-            List<ResolveInfo> uniq=new ArrayList<>(map.values());
+            final List<ResolveInfo> uniq=new ArrayList<>(map.values());
             Collections.sort(uniq,(a,b)-> (labelCache.containsKey(a.activityInfo.packageName)?labelCache.get(a.activityInfo.packageName):a.loadLabel(getPackageManager()).toString()).compareToIgnoreCase(labelCache.containsKey(b.activityInfo.packageName)?labelCache.get(b.activityInfo.packageName):b.loadLabel(getPackageManager()).toString()));
-            List<ResolveInfo> filtered=new ArrayList<>(uniq);
+            final List<ResolveInfo> filtered=new ArrayList<>(uniq);
             LinearLayout container=new LinearLayout(this); container.setOrientation(LinearLayout.VERTICAL);
             EditText search=new EditText(this); search.setHint("Rechercher..."); search.setTextColor(0xFFFFFFFF); search.setHintTextColor(0xFFAAAAAA); search.setPadding(40,30,40,30); search.setBackgroundColor(0x22FFFFFF);
             RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new LinearLayoutManager(this));
