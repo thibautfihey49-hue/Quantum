@@ -173,7 +173,9 @@ public class MainActivity extends Activity {
 }
 
     void loadAppsBg(){ /* charge pm query + lowercased labels */ loadApps(); runOnUiThread(()->{ if(rvFavorites.getAdapter()!=null) rvFavorites.getAdapter().notifyDataSetChanged(); }); 
-    void prewarmGlass(){ int[] cols={0xFF7C4DFF,0xFF00BCD4,0xFFFF4081,0xFF4CAF50,0xFFFF9800,0xFF2196F3,0xFFE91E63,0xFF9C27B0,0xFF009688,0xFFFFEB3B,0xFF795548,0xFF607D8B,0xFFFF5722,0xFF00E5FF,0xFF76FF03,0xFFFFD740,0xFF651FFF,0xFF18FFFF,0xFFFF6E40,0xFF69F0AE,0xFFD500F9,0xFF00B0FF,0xFFFF1744,0xFF1DE9B6,0xFFFFEA00,0xFF3D5AFE,0xFFFF9100,0xFF00BFA5,0xFF6200EA,0xFFC6FF00,0xFFFF3D00,0xFF64FFDA,0xFF00,0xFF2979FF,0xFFFFAB00,0xFFAEEA00}; for(int c:cols) glassBg(c, 24*getResources().getDisplayMetrics().density, 96); }
-    android.graphics.drawable.Drawable getCachedIcon(String pkg){ android.graphics.drawable.Drawable d=iconCache.get(pkg); if(d!=null) return d; try{ d=getPackageManager().getApplicationIcon(pkg); iconCache.put(pkg,d); }catch(Exception e){} return d; }
+
+    void prewarmGlass(){ int[] cols={0xFF7C4DFF,0xFF00BCD4,0xFFFF4081,0xFF4CAF50,0xFFFF9800,0xFF2196F3}; for(int c:cols) glassBg(c, 24*getResources().getDisplayMetrics().density, 96); }
+    android.graphics.drawable.Drawable getCachedIcon(String pkg){ android.graphics.drawable.Drawable d=iconCache.get(pkg); if(d!=null) return d; try{ d=getPackageManager().getApplicationIcon(pkg); iconCache.put(pkg,d);}catch(Exception e){} return d; }
     void loadAppsBg(){ loadApps(); runOnUiThread(()->{ if(rvFavorites.getAdapter()!=null) rvFavorites.getAdapter().notifyDataSetChanged(); }); }
+
 }
