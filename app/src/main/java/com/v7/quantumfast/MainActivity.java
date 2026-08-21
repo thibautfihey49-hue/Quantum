@@ -18,6 +18,13 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
+ android.content.BroadcastReceiver mThemeReceiver=null;
+ android.appwidget.AppWidgetManager awm;
+ android.appwidget.AppWidgetHost awHost;
+ static final int REQ_PICK_WIDGET=1950;
+ static final int REQ_CREATE_WIDGET=1951;
+ android.widget.FrameLayout widgetContainer;
+
     View mainRoot;
     EditText searchApps, searchWeb;
     RecyclerView rvSugg, rvFav;
@@ -44,6 +51,19 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
         setContentView(R.layout.activity_main);
+        try{ java.io.File wf=new java.io.File(getFilesDir(),"quantum_wall.jpg"); if(wf.exists()){ android.graphics.drawable.Drawable wd=android.graphics.drawable.Drawable.createFromPath(wf.getAbsolutePath()); if(wd!=null){ cachedWallpaperDrawable=wd; getWindow().setBackgroundDrawable(wd); if(mainRoot!=null) mainRoot.setBackground(wd); } } }catch(Exception e){}
+        try{
+            awm=android.appwidget.AppWidgetManager.getInstance(this);
+            awHost=new android.appwidget.AppWidgetHost(this, 2025); awHost.startListening();
+            widgetContainer=new android.widget.FrameLayout(this); widgetContainer.setId(R.id.widget_container);
+            if(mainRoot!=null) ((android.view.ViewGroup)mainRoot).addView(widgetContainer, new android.widget.FrameLayout.LayoutParams(-1,-1));
+            restoreWidgets();
+            mThemeReceiver=new android.content.BroadcastReceiver(){ public void onReceive(android.content.Context c, Intent i){ refreshFromSystemTheme(); } };
+            android.content.IntentFilter f=new android.content.IntentFilter();
+            f.addAction(Intent.ACTION_WALLPAPER_CHANGED); f.addAction("com.oppo.themechooser.THEME_CHANGED"); f.addAction("com.heytap.themestore.THEME_CHANGED");
+            registerReceiver(mThemeReceiver, f);
+        }catch(Exception e){}
+
         getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN | android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
@@ -233,7 +253,47 @@ public class MainActivity extends Activity {
 
 
     @Override protected void onResume(){ super.onResume(); if(cachedWallpaperDrawable!=null && mainRoot!=null) mainRoot.setBackground(cachedWallpaperDrawable); else loadWallpaperPersist(); }
-    @Override protected void onNewIntent(Intent intent){ super.onNewIntent(intent); clearSearchNow(); }
+    @Override 
+    void refreshFromSystemTheme(){
+        try{
+            cachedWallpaperDrawable=null; try{ iconCache.evictAll(); }catch(Exception e){} fullCacheReady=false;
+            java.io.File wf=new java.io.File(getFilesDir(),"quantum_wall.jpg"); if(wf.exists()) wf.delete();
+            try{ android.app.WallpaperManager wm=android.app.WallpaperManager.getInstance(this); android.graphics.drawable.Drawable sys=wm.getDrawable(); if(sys!=null){ cachedWallpaperDrawable=sys; getWindow().setBackgroundDrawable(sys); if(mainRoot!=null) mainRoot.setBackground(sys); } }catch(Exception e){}
+            loadWallpaperPersist(); ensureFullCache();
+            runOnUiThread(()->{ try{ setupDock(); }catch(Exception e){} });
+        }catch(Exception e){}
+    }
+    void restoreWidgets(){
+        try{
+            String ids=prefs.getString("widgets",""); if(ids.isEmpty()) return;
+            for(String s:ids.split(",")){ try{ int id=Integer.parseInt(s.trim()); android.appwidget.AppWidgetProviderInfo info=awm.getAppWidgetInfo(id); if(info!=null){ android.appwidget.AppWidgetHostView hv=awHost.createView(this,id,info); hv.setAppWidget(id,info); makeDraggable(hv,id); hv.setX(prefs.getInt("wx_"+id,0)); hv.setY(prefs.getInt("wy_"+id,200)); widgetContainer.addView(hv); } }catch(Exception e){} }
+        }catch(Exception e){}
+    }
+    void makeDraggable(android.view.View v, int appId){
+        final int[] off=new int[2]; final boolean[] dragging={false};
+        v.setOnLongClickListener(vv->{ dragging[0]=true; vv.bringToFront(); return true; });
+        v.setOnTouchListener((view, ev)->{
+            if(!dragging[0]) return false;
+            switch(ev.getAction()){
+                case android.view.MotionEvent.ACTION_DOWN: off[0]=(int)(ev.getRawX()-view.getX()); off[1]=(int)(ev.getRawY()-view.getY()); break;
+                case android.view.MotionEvent.ACTION_MOVE: view.setX(ev.getRawX()-off[0]); view.setY(ev.getRawY()-off[1]); break;
+                case android.view.MotionEvent.ACTION_UP: dragging[0]=false; prefs.edit().putInt("wx_"+appId,(int)view.getX()).putInt("wy_"+appId,(int)view.getY()).apply(); break;
+            }
+            return true;
+        });
+    }
+    void pickWidget(){ try{ int id=awHost.allocateAppWidgetId(); Intent pick=new Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_PICK); pick.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID,id); startActivityForResult(pick, REQ_PICK_WIDGET); }catch(Exception e){} }
+    void addWidget(int id){
+        try{
+            android.appwidget.AppWidgetProviderInfo info=awm.getAppWidgetInfo(id);
+            android.appwidget.AppWidgetHostView hv=awHost.createView(this,id,info); hv.setAppWidget(id,info);
+            makeDraggable(hv,id); hv.setX(0); hv.setY(200);
+            widgetContainer.addView(hv);
+            String cur=prefs.getString("widgets",""); prefs.edit().putString("widgets", cur.isEmpty()? String.valueOf(id): cur+","+id).apply();
+        }catch(Exception e){}
+    }
+    protected void onNewIntent
+(Intent intent){ super.onNewIntent(intent); clearSearchNow(); }
     
     void loadWallpaperPersist(){
         try{
