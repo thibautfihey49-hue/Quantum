@@ -28,6 +28,8 @@ public class MainActivity extends Activity {
     List<String> favPkgs=new ArrayList<>();
     List<String> manualTopPkgs=new ArrayList<>();
     Map<String, Intent> launchIntentCache=new HashMap<>();
+    Map<String, String> labelCache=new HashMap<>();
+    Map<String, String> labelCacheLow=new HashMap<>();
     ExecutorService pool=Executors.newFixedThreadPool(2);
     Handler mainH=new Handler(Looper.getMainLooper());
     String[] dockKeys={"dock_phone","dock_msg","dock_extra","dock_drawer","dock_cam","dock_chrome"};
@@ -69,7 +71,7 @@ public class MainActivity extends Activity {
         View favBtn=findV("btnAddFav","Fav","fav"); if(favBtn!=null) favBtn.setOnClickListener(v->showAddFavDialog());
         View men=findV("btnMenu","Menu","menu"); if(men!=null) men.setOnClickListener(v->showMenuModern());
 
-        loadFavs(); loadManualTop(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
+        loadFavs(); loadManualTop(); askDefaultLauncher(); if(rvFav!=null) rvFav.setAdapter(new FavAdapter());
         setupAtAGlance(); preloadMax(); setupDock();
         applyGlassTheme(glassPrefs.getInt("glass_color",0xFF7C4DFF));
         if(searchApps!=null) searchApps.addTextChangedListener(new android.text.TextWatcher(){
@@ -89,9 +91,8 @@ public class MainActivity extends Activity {
     void filterAppsInstant(String q){ try{
             suggList.clear(); if(q==null||q.trim().isEmpty()){ if(rvSugg!=null) rvSugg.setAdapter(new SuggAdapter()); return; }
             String lq=q.toLowerCase().trim();
-            for(String pkg: manualTopPkgs){ try{ for(ResolveInfo ri: allAppsCache){ if(ri.activityInfo.packageName.equals(pkg)){ String label=ri.loadLabel(getPackageManager()).toString().toLowerCase(); if(label.contains(lq) || pkg.toLowerCase().contains(lq)){ suggList.add(ri); } break; } } }catch(Exception e){} }
-            List<ResolveInfo> src=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache;
-            for(ResolveInfo ri:src){ if(suggList.size()>=80) break; boolean already=false; for(ResolveInfo x:suggList) if(x.activityInfo.packageName.equals(ri.activityInfo.packageName)) {already=true; break;} if(already) continue; String label=ri.loadLabel(getPackageManager()).toString().toLowerCase(); if(label.contains(lq) || ri.activityInfo.packageName.toLowerCase().contains(lq)){ suggList.add(ri); } }
+            for(String pkg: manualTopPkgs){ try{ String low=labelCacheLow.get(pkg); if(low==null) continue; if(low.contains(lq) || pkg.toLowerCase().contains(lq)){ for(ResolveInfo ri: allAppsCache){ if(ri.activityInfo.packageName.equals(pkg)){ suggList.add(ri); break; } } } }catch(Exception e){} }
+            for(ResolveInfo ri: allAppsCache){ if(suggList.size()>=80) break; String pkg=ri.activityInfo.packageName; boolean already=false; for(ResolveInfo x:suggList) if(x.activityInfo.packageName.equals(ri.activityInfo.packageName)){already=true; break;} if(already) continue; String low=labelCacheLow.get(pkg); if(low==null){ low=ri.loadLabel(getPackageManager()).toString().toLowerCase(); labelCacheLow.put(pkg, low); } if(low.contains(lq) || pkg.toLowerCase().contains(lq)) suggList.add(ri); }
             try{ Collections.sort(suggList,(a,b)-> Integer.compare(getUsage(b.activityInfo.packageName), getUsage(a.activityInfo.packageName))); }catch(Exception e){}
             if(rvSugg!=null){ rvSugg.setAdapter(new SuggAdapter()); rvSugg.setVisibility(View.VISIBLE); }
         }catch(Exception e){} }
@@ -122,6 +123,26 @@ public class MainActivity extends Activity {
     void loadManualTop(){ try{ manualTopPkgs.clear(); String s=prefs.getString("manual_top",""); if(!s.isEmpty()) for(String pkg:s.split(",")) if(!pkg.trim().isEmpty()) manualTopPkgs.add(pkg.trim()); }catch(Exception e){} }
     void trackUsage(String pkg){ try{ int c=usagePrefs.getInt(pkg,0)+1; usagePrefs.edit().putInt(pkg,c).apply(); }catch(Exception e){} }
     int getUsage(String pkg){ if(manualTopPkgs.contains(pkg)) return 999999; return usagePrefs.getInt(pkg,0); }
+    
+    void askDefaultLauncher(){
+        try{
+            if(prefs.getBoolean("default_asked", false)) return;
+            Intent home=new Intent(Intent.ACTION_MAIN); home.addCategory(Intent.CATEGORY_HOME); home.addCategory(Intent.CATEGORY_DEFAULT);
+            ResolveInfo def=getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY);
+            if(def!=null && !def.activityInfo.packageName.equals(getPackageName())){
+                LinearLayout lay=new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); lay.setPadding(60,40,60,20);
+                TextView tv=new TextView(this); tv.setText("Définir Quantum comme launcher par défaut pour un lancement instantané ?"); tv.setTextColor(Color.WHITE); tv.setTextSize(15); tv.setPadding(0,0,0,30);
+                lay.addView(tv);
+                android.widget.Button b1=new android.widget.Button(this); b1.setText("DEFINIR MAINTENANT");
+                android.widget.Button b2=new android.widget.Button(this); b2.setText("Plus tard");
+                lay.addView(b1); lay.addView(b2);
+                AlertDialog dlg=createModernDialog("Launcher par défaut ?", lay);
+                b1.setOnClickListener(v->{ try{ prefs.edit().putBoolean("default_asked", true).apply(); startActivity(new Intent(android.provider.Settings.ACTION_HOME_SETTINGS)); }catch(Exception e){ try{ Intent i=new Intent(Intent.ACTION_MAIN); i.addCategory(Intent.CATEGORY_HOME); i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(Intent.createChooser(i,"Choisir launcher")); }catch(Exception ex){} } dlg.dismiss(); });
+                b2.setOnClickListener(v->{ prefs.edit().putBoolean("default_asked", true).apply(); dlg.dismiss(); });
+                dlg.show();
+            }
+        }catch(Exception e){}
+    }
     void showManualTopPicker(){
         try{
             List<ResolveInfo> apps=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache;
@@ -138,7 +159,22 @@ public class MainActivity extends Activity {
             AlertDialog dlg=createModernDialog("Mes apps fusee (12 max)", rv); dlg.show();
         }catch(Exception e){}
     }
-    void pickDockApp(int idx){ showManualTopPicker(); }
+    void pickDockApp(int idx){
+        try{
+            List<ResolveInfo> apps=allAppsCache.isEmpty()? getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0) : allAppsCache;
+            LinkedHashMap<String, ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:apps){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName, ri); }
+            List<ResolveInfo> uniq=new ArrayList<>(map.values());
+            Collections.sort(uniq,(a,b)->a.loadLabel(getPackageManager()).toString().compareToIgnoreCase(b.loadLabel(getPackageManager()).toString()));
+            RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new LinearLayoutManager(this));
+            rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
+                class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
+                public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup pg,int vt){ LinearLayout row=new LinearLayout(MainActivity.this); row.setOrientation(LinearLayout.HORIZONTAL); row.setPadding(24,20,24,20); ImageView iv=new ImageView(MainActivity.this); iv.setId(R.id.icon); row.addView(iv,new LinearLayout.LayoutParams(96,96)); TextView tv=new TextView(MainActivity.this); tv.setId(R.id.label); tv.setTextColor(Color.WHITE); tv.setPadding(24,0,0,0); row.addView(tv,new LinearLayout.LayoutParams(0,-2,1f)); return new H(row); }
+                public void onBindViewHolder(RecyclerView.ViewHolder hh,int pos){ H h=(H)hh; ResolveInfo ri=uniq.get(pos); String pkg=ri.activityInfo.packageName; h.lb.setText(labelCache.containsKey(pkg)?labelCache.get(pkg):ri.loadLabel(getPackageManager()).toString()); Drawable cd=iconCache.get(pkg); h.ic.setImageDrawable(cd!=null?cd:ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v->{ try{ List<String> dock=new ArrayList<>(Arrays.asList(prefs.getString("dock","").split(","))); while(dock.size()<4) dock.add(""); dock.set(idx, pkg); prefs.edit().putString("dock", String.join(",", dock)).apply(); setupDock(); }catch(Exception e){} try{ ((AlertDialog)rv.getTag()).dismiss(); }catch(Exception e){} }); }
+                public int getItemCount(){ return uniq.size(); }
+            });
+            AlertDialog dlg=createModernDialog("Choisir app dock "+(idx+1), rv); rv.setTag(dlg); dlg.show();
+        }catch(Exception e){}
+    }
 
     @Override protected void onResume(){ super.onResume(); clearSearchNow(); }
     @Override protected void onNewIntent(Intent intent){ super.onNewIntent(intent); clearSearchNow(); }
