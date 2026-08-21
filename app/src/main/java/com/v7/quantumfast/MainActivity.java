@@ -129,7 +129,7 @@ public class MainActivity extends Activity {
             LinkedHashMap<String, ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:allAppsCache) map.putIfAbsent(ri.activityInfo.packageName, ri);
             cachedUniqApps=new ArrayList<>(map.values());
             try{ Collections.sort(cachedUniqApps,(a,b)-> labelCache.getOrDefault(a.activityInfo.packageName,"").compareToIgnoreCase(labelCache.getOrDefault(b.activityInfo.packageName,""))); }catch(Exception e){}
-            new Thread(()->{ try{ for(ResolveInfo ri: allAppsCache){ String pkg=ri.activityInfo.packageName; if(!iconCache.containsKey(pkg)){ try{ Drawable d=ri.loadIcon(getPackageManager()); if(d!=null) iconCache.put(pkg,d); }catch(Exception e){} } } }catch(Exception e){} }).start();
+            new Thread(()->{ try{ for(ResolveInfo ri: allAppsCache){ String pkg=ri.activityInfo.packageName; if(iconCache.get(pkg)==null){ try{ Drawable d=ri.loadIcon(getPackageManager()); if(d!=null) iconCache.put(pkg,d); }catch(Exception e){} } } }catch(Exception e){} }).start();
             loadWallpaperPersist(); fullCacheReady=true; lastCacheTime=System.currentTimeMillis();
         }catch(Exception e){}
     }
@@ -261,33 +261,6 @@ public class MainActivity extends Activity {
             byte[] buf=new byte[8192]; int r; while((r=in.read(buf))!=-1) os.write(buf,0,r);
             in.close(); os.close();
             prefs.edit().putString("wallpaper_file", out.getAbsolutePath()).commit();
-            loadWallpaperPersist();
-        }catch(Exception e){}
-    }
-    
-    void loadWallpaperPersist(){
-        try{
-            if(cachedWallpaperDrawable!=null){ if(mainRoot!=null) mainRoot.setBackground(cachedWallpaperDrawable); return; }
-            java.io.File internal=new java.io.File(getFilesDir(),"quantum_wall.jpg");
-            String saved=prefs.getString("wallpaper_file","");
-            java.io.File f=null;
-            if(!saved.isEmpty()) f=new java.io.File(saved);
-            if(f==null ||!f.exists()) f=internal;
-            if(f!=null && f.exists()){
-                android.graphics.drawable.Drawable d=android.graphics.drawable.Drawable.createFromPath(f.getAbsolutePath());
-                if(d!=null){ cachedWallpaperDrawable=d; if(mainRoot!=null) mainRoot.setBackground(d); }
-            }
-        }catch(Exception e){}
-    }
-    void saveWallpaperPersist(android.net.Uri uri){
-        try{
-            java.io.InputStream in=getContentResolver().openInputStream(uri);
-            java.io.File out=new java.io.File(getFilesDir(),"quantum_wall.jpg");
-            java.io.OutputStream os=new java.io.FileOutputStream(out);
-            byte[] buf=new byte[8192]; int r; while((r=in.read(buf))!=-1) os.write(buf,0,r);
-            in.close(); os.close();
-            prefs.edit().putString("wallpaper_file", out.getAbsolutePath()).commit();
-            cachedWallpaperDrawable=android.graphics.drawable.Drawable.createFromPath(out.getAbsolutePath());
             loadWallpaperPersist();
         }catch(Exception e){}
     }
