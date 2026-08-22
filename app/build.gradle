@@ -8,8 +8,8 @@ android {
         applicationId "com.v7.quantumfast"
         minSdk 26
         targetSdk 34
-        versionCode 16
-        versionName "16-STABLE"
+        versionCode 17
+        versionName "17-GREEN-REVERT"
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -19,7 +19,6 @@ android {
         debug { minifyEnabled false }
         release { minifyEnabled false }
     }
-    packaging { resources { excludes += '/META-INF/{AL2.0,LGPL2.1}' } }
 }
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
