@@ -4,179 +4,33 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000">
-
-    <ImageView
-        android:id="@+id/wallpaper"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:paddingTop="40dp"
-        android:paddingLeft="12dp"
-        android:paddingRight="12dp"
-        android:clipToPadding="false">
-
-        <TextView
-            android:id="@+id/clock"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="19:44"
-            android:textSize="34sp"
-            android:textColor="#FFFFFF"
-            android:fontFamily="sans-serif-light"
-            android:letterSpacing="0.05" />
-
-        <TextView
-            android:id="@+id/dateInfo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="JEU. 20 AOÛT • Paris"
-            android:textSize="12sp"
-            android:textColor="#FFD37F"
-            android:letterSpacing="0.08"
-            android:layout_marginTop="2dp"
-            android:layout_marginBottom="0dp" />
-
-        <LinearLayout
-            android:id="@+id/widgetContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="4dp" />
-
-        <!-- SEARCH 20dp SOUS 01:10 - deplace ici -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="20dp">
-
-            <EditText
-                android:id="@+id/searchAppsMain"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:layout_weight="1"
-                android:hint="Rechercher apps..."
-                android:background="@android:color/transparent"
-                android:padding="16dp"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#88FFFFFF"
-                android:singleLine="true" />
-
-            <ImageView
-                android:id="@+id/clearApps"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:layout_gravity="center"
-                android:padding="8dp" />
+    <ImageView android:id="@+id/wallpaper" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:paddingTop="40dp" android:paddingLeft="12dp" android:paddingRight="12dp">
+        <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="19:44" android:textSize="34sp" android:textColor="#FFFFFF" android:fontFamily="sans-serif-light" />
+        <TextView android:id="@+id/dateInfo" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="JEU. 20 AOUT" android:textSize="12sp" android:textColor="#FFD37F" android:layout_marginTop="2dp" />
+        <LinearLayout android:id="@+id/widgetContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="8dp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="20dp">
+            <EditText android:id="@+id/searchAppsMain" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:hint="Rechercher apps..." android:background="@android:color/transparent" android:padding="16dp" android:textColor="#FFFFFF" android:textColorHint="#88FFFFFF" android:singleLine="true" />
+            <ImageView android:id="@+id/clearApps" android:layout_width="40dp" android:layout_height="40dp" android:src="@android:drawable/ic_menu_close_clear_cancel" android:layout_gravity="center" android:padding="8dp" />
         </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <EditText
-                android:id="@+id/searchWebMain"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:layout_weight="1"
-                android:hint="yt Luffy, g, d, w..."
-                android:background="@android:color/transparent"
-                android:padding="16dp"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#88FFFFFF"
-                android:singleLine="true" />
-
-            <TextView
-                android:id="@+id/btnWebGo"
-                android:layout_width="64dp"
-                android:layout_height="56dp"
-                android:text="Go"
-                android:gravity="center"
-                android:textColor="#FFFFFF"
-                android:background="@android:color/transparent" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
+            <EditText android:id="@+id/searchWebMain" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:hint="yt Luffy, g, d, w..." android:background="@android:color/transparent" android:padding="16dp" android:textColor="#FFFFFF" android:textColorHint="#88FFFFFF" android:singleLine="true" />
+            <TextView android:id="@+id/btnWebGo" android:layout_width="64dp" android:layout_height="56dp" android:text="Go" android:gravity="center" android:textColor="#FFFFFF" />
         </LinearLayout>
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvFavorites"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:clipToPadding="false"
-            android:padding="4dp"
-            android:layout_marginTop="12dp" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvSuggestions"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:id="@+id/btnAddFav"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Fav"
-                android:textColor="#FFFFFF"
-                android:padding="12dp"
-                android:textSize="16sp" />
-
-            <TextView
-                android:id="@+id/btnMenu"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Menu"
-                android:textColor="#FFFFFF"
-                android:padding="12dp"
-                android:layout_marginLeft="24dp"
-                android:textSize="16sp" />
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvFavorites" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:padding="4dp" android:layout_marginTop="12dp" />
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSuggestions" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:orientation="horizontal" android:layout_marginTop="12dp" android:layout_marginBottom="8dp">
+            <TextView android:id="@+id/btnAddFav" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fav" android:textColor="#FFFFFF" android:padding="12dp" android:textSize="16sp" />
+            <TextView android:id="@+id/btnMenu" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Menu" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginLeft="24dp" android:textSize="16sp" />
         </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/dock"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:padding="8dp"
-            android:clipToPadding="false">
-
-            <FrameLayout android:id="@+id/dPhone" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1">
-                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" />
-            </FrameLayout>
-            <FrameLayout android:id="@+id/dMsg" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1">
-                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" />
-            </FrameLayout>
-            <FrameLayout android:id="@+id/dExtra" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1">
-                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" />
-            </FrameLayout>
-            <FrameLayout android:id="@+id/dDrawer" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1">
-                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" />
-            </FrameLayout>
-            <FrameLayout android:id="@+id/dCam" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1">
-                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" />
-            </FrameLayout>
-            <FrameLayout android:id="@+id/dChrome" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1">
-                <ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" />
-            </FrameLayout>
+        <LinearLayout android:id="@+id/dock" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center" android:padding="8dp">
+            <FrameLayout android:id="@+id/dPhone" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
+            <FrameLayout android:id="@+id/dMsg" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
+            <FrameLayout android:id="@+id/dExtra" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
+            <FrameLayout android:id="@+id/dDrawer" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
+            <FrameLayout android:id="@+id/dCam" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
+            <FrameLayout android:id="@+id/dChrome" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1"><ImageView android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" /></FrameLayout>
         </LinearLayout>
-
     </LinearLayout>
 </FrameLayout>
 
