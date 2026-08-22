@@ -280,7 +280,7 @@ public class MainActivity extends Activity {
             LinearLayout lay=new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); lay.setPadding(30,30,30,30);
             TextView info=new TextView(this); info.setText("Télécharge des icones depuis le web (GitHub, site d'icon packs) et applique les.\n\n1. Colle URL d'un ZIP (ex: Arcticons release zip, ou pack perso)\n2. Ou choisis un ZIP local\n\nLe ZIP doit contenir des PNG nommés com.package.png ou un appfilter.xml"); info.setTextColor(Color.LTGRAY); info.setTextSize(12); lay.addView(info);
             EditText et=new EditText(this); et.setHint("https://github.com/.../icons.zip"); et.setTextColor(Color.WHITE); et.setHintTextColor(Color.GRAY); lay.addView(et);
-            TextView examples=new TextView(this); examples.setText("\nURLs qui MARCHENT (copie-colle):\n- Arcticons complet: https://github.com/ArcticonsTeam/Arcticons/archive/refs/heads/main.zip\n- Delta: https://github.com/Delta-Icons/Delta/archive/refs/heads/master.zip\n- Astuce: si GitHub bloque, DL le ZIP sur Chrome puis importe en local avec bouton ZIP local\n- Tu peux aussi zipper tes propres PNG nommes com.app.png"); examples.setTextColor(Color.CYAN); examples.setTextSize(11); lay.addView(examples);
+            TextView examples=new TextView(this); examples.setText("\nDEPOTS MULTI-THEMES LES PLUS GROS SUR GITHUB:\n\n1. Arcticons-Team/Arcticons - 14,332 icones (le plus gros gratuit open source)\n   Variantes: Arcticons, Dark, Material You\n   URL: https://github.com/ArcticonsTeam/Arcticons/archive/refs/heads/main.zip\n\n2. PapirusDevelopmentTeam/papirus-icon-theme - 5 variantes: Papirus, Dark, Light, ePapirus, ePapirus Dark\n   Android: https://github.com/PapirusDevelopmentTeam/papirus_icons\n\n3. Numix Project - base theme + circle, square variants\n   https://github.com/numixproject/numix-icon-theme\n\n4. Delta-Icons/Delta - plusieurs styles dans un repo\n   https://github.com/Delta-Icons/Delta/archive/refs/heads/master.zip\n\n5. Blueprint / CandyBar - template pour faire 1 APK = plusieurs themes\n   https://github.com/jahirfiquitiva/blueprint\n   https://github.com/zixpo/candybar-sample\n\nAstuce: DL le ZIP sur Chrome puis importe en local si le direct bloque"); examples.setTextColor(Color.CYAN); examples.setTextSize(11); lay.addView(examples);
             new AlertDialog.Builder(this).setTitle("📥 Importer depuis le web").setView(lay).setPositiveButton("Télécharger URL", (d,w)->{ String url=et.getText().toString().trim(); if(!url.isEmpty()) downloadAndApplyPack(url); }).setNeutralButton("Choisir ZIP local", (d,w)->{ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("application/zip"); i.addCategory(Intent.CATEGORY_OPENABLE); i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/zip","application/x-zip","application/octet-stream"}); startActivityForResult(i,1002); }).setNegativeButton("Annuler",null).show();
         }catch(Exception e){ Toast.makeText(this, "import: "+e.getMessage(),0).show(); }
     }
@@ -300,15 +300,50 @@ public class MainActivity extends Activity {
         }catch(Exception e){}
         return null;
     }
+
+    void showThemeStoreFree(){
+        try{
+            LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); list.setPadding(10,10,10,10);
+            TextView title=new TextView(this); title.setText("THEME STORE GRATUIT - Alternative à Oppo Theme Store (100% gratuit, open source)"); title.setTextColor(Color.YELLOW); title.setTypeface(null, android.graphics.Typeface.BOLD); title.setPadding(20,20,20,20); list.addView(title);
+            TextView sub=new TextView(this); sub.setText("Oppo Theme Store est payant et limité. Ici 5 fournisseurs gratuits plus complets avec 20k+ icones au total."); sub.setTextColor(Color.LTGRAY); sub.setPadding(20,0,20,20); list.addView(sub);
+
+            String[][] stores={
+                {"Arcticons Team - 14,332 icones (plus gros du monde)", "Gratuit, open source, 3 themes: clair/dark/Material You", "https://github.com/ArcticonsTeam/Arcticons/archive/refs/heads/main.zip"},
+                {"Papirus - 5 themes (Papirus/Dark/Light/ePapirus)", "Linux + Android, 1000+ icones, multi-couleur", "https://github.com/PapirusDevelopmentTeam/papirus_icons/archive/refs/heads/master.zip"},
+                {"Delta Icons - 2400+ icones multi-style", "Gratuit, flat + circle + square dans un repo", "https://github.com/Delta-Icons/Delta/archive/refs/heads/master.zip"},
+                {"Whicons - 2732 icones blanc minimal", "Masquage auto, theme 100% apps", "https://github.com/whicons/whicons/archive/refs/heads/master.zip"},
+                {"Material You Repository - 100+ apps themables", "Collection open source Material You themes/APKs", "https://github.com/Afnankhan804/Material-You-App-Repository"},
+                {"Numix Project - base + variants", "Theme officiel Numix avec variantes", "https://github.com/numixproject/numix-icon-theme/archive/refs/heads/master.zip"},
+                {"AxionOS Theme Store - store open source", "Repository pour AxionOS Theme Store, catalogue themes.json", "https://github.com/AxionAOSP/axthemestore_themes_repository"}
+            };
+
+            for(String[] s: stores){
+                LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(25,25,25,25); card.setBackgroundColor(0x22FFFFFF);
+                LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,20); card.setLayoutParams(lp);
+                TextView name=new TextView(this); name.setText(s[0]); name.setTextColor(Color.WHITE); name.setTypeface(null, android.graphics.Typeface.BOLD); name.setTextSize(14); card.addView(name);
+                TextView desc=new TextView(this); desc.setText(s[1]); desc.setTextColor(Color.LTGRAY); desc.setTextSize(11); desc.setPadding(0,5,0,10); card.addView(desc);
+                TextView btn=new TextView(this); btn.setText("⬇ TELECHARGER ET APPLIQUER"); btn.setTextColor(Color.BLACK); btn.setBackgroundColor(Color.CYAN); btn.setPadding(20,15,20,15); btn.setTypeface(null, android.graphics.Typeface.BOLD);
+                String url=s[2]; btn.setOnClickListener(v->{ if(url.endsWith(".zip")) downloadAndApplyPack(url); else { Intent i=new Intent(Intent.ACTION_VIEW, Uri.parse(url)); startActivity(i); } });
+                card.addView(btn);
+                list.addView(card);
+            }
+
+            ScrollView sv=new ScrollView(this); sv.addView(list);
+            new AlertDialog.Builder(this).setTitle("Theme Store Gratuit (alternative Oppo)").setView(sv).setNegativeButton("Fermer",null).show();
+        }catch(Exception e){ Toast.makeText(this, "store: "+e.getMessage(),0).show(); }
+    }
+
+    
     void showMenu(){
         try{
-            new AlertDialog.Builder(this).setTitle("Menu").setItems(new String[]{"Couleur","Fond HD","Icon packs gratuits","Polices + Taille","Effacer fond"}, (d,w)->{
+            new AlertDialog.Builder(this).setTitle("Menu").setItems(new String[]{"Theme Store Gratuit (altern. Oppo)","Couleur","Fond HD","Icon packs gratuits","Polices + Taille","Effacer fond"}, (d,w)->{
                 try{
-                    if(w==0) showColorPicker();
-                    else if(w==1) pickWallpaper();
-                    else if(w==2) showIconPack();
-                    else if(w==3) showFontPicker();
-                    else if(w==4){ if(wallpaperView!=null) wallpaperView.setImageDrawable(null); prefs.edit().remove("wall_uri").apply(); Toast.makeText(this,"Fond efface",0).show(); }
+                    if(w==0) showThemeStoreFree();
+                    else if(w==1) showColorPicker();
+                    else if(w==2) pickWallpaper();
+                    else if(w==3) showIconPack();
+                    else if(w==4) showFontPicker();
+                    else if(w==5){ if(wallpaperView!=null) wallpaperView.setImageDrawable(null); prefs.edit().remove("wall_uri").apply(); Toast.makeText(this,"Fond efface",0).show(); }
                 }catch(Exception e){}
             }).show();
         }catch(Exception e){}
@@ -353,6 +388,12 @@ public class MainActivity extends Activity {
             String curTheme=getIconTheme();
             String curPack=getIconPack();
 
+            TextView repoTitle=new TextView(this); repoTitle.setText("DEPOTS GITHUB MULTI-THEMES (clique pour DL)"); repoTitle.setTextColor(Color.YELLOW); repoTitle.setTypeface(null, android.graphics.Typeface.BOLD); repoTitle.setPadding(20,20,20,10); list.addView(repoTitle);
+            String[][] repos={{"Arcticons 14k (plus gros)", "https://github.com/ArcticonsTeam/Arcticons/archive/refs/heads/main.zip"}, {"Papirus 5 themes", "https://github.com/PapirusDevelopmentTeam/papirus_icons/archive/refs/heads/master.zip"}, {"Delta multi-style", "https://github.com/Delta-Icons/Delta/archive/refs/heads/master.zip"}, {"Numix base", "https://github.com/numixproject/numix-icon-theme/archive/refs/heads/master.zip"}};
+            for(String[] r: repos){
+                TextView tv=new TextView(this); tv.setText("⬇ "+r[0]); tv.setTextColor(Color.CYAN); tv.setPadding(30,20,30,20); tv.setBackgroundColor(0x22FFFFFF);
+                String url=r[1]; tv.setOnClickListener(v->{ downloadAndApplyPack(url); }); list.addView(tv);
+            }
             TextView webBtn=new TextView(this); webBtn.setText("📥 IMPORTER DEPUIS LE WEB / FICHIER ZIP"); webBtn.setTextColor(Color.BLACK); webBtn.setBackgroundColor(Color.YELLOW); webBtn.setPadding(30,30,30,30); webBtn.setTypeface(null, android.graphics.Typeface.BOLD); webBtn.setOnClickListener(v->{ showWebImportDialog(); }); list.addView(webBtn);
             File customDir=getCustomIconDir(); int customCount=customDir.listFiles()!=null?customDir.listFiles().length:0;
             TextView customInfo=new TextView(this); customInfo.setText("Pack web actuel: "+customCount+" icones dans "+customDir.getAbsolutePath()); customInfo.setTextColor(Color.LTGRAY); customInfo.setPadding(20,10,20,20); customInfo.setTextSize(11); list.addView(customInfo);
