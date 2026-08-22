@@ -419,9 +419,9 @@ public class MainActivity extends Activity {
             }
             View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setBackground(glassBg(col, 28*dens, 92));
             View dock=findViewGlass("dock","dockBar","dock_container","dockContainer","bottomDock"); if(dock!=null) dock.setBackground(glassBg(col, 26*dens, 68));
-            TextView tf=findViewGlass("btnAddFav","Fav"); if(tf!=null) tf.setTextColor(Color.WHITE);
-            TextView to=findViewGlass("btnAddFolder","Folder"); if(to!=null) to.setTextColor(Color.WHITE);
-            TextView tm=findViewGlass("btnMenu","Menu"); if(tm!=null) tm.setTextColor(Color.WHITE);
+            TextView tf=(TextView)findViewGlass("btnAddFav","Fav"); if(tf!=null) tf.setTextColor(Color.WHITE);
+            TextView to=(TextView)findViewGlass("btnAddFolder","Folder"); if(to!=null) to.setTextColor(Color.WHITE);
+            TextView tm=(TextView)findViewGlass("btnMenu","Menu"); if(tm!=null) tm.setTextColor(Color.WHITE);
         }catch(Exception e){}
     }
 
