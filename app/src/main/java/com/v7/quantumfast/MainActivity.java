@@ -5,7 +5,6 @@ import android.os.*;
 import android.widget.*;
 import android.view.*;
 import android.content.*;
-import android.provider.Settings;
 import android.graphics.*;
 import android.graphics.drawable.*;
 import android.net.Uri;
@@ -15,6 +14,7 @@ import android.util.LruCache;
 import androidx.recyclerview.widget.*;
 import java.util.*;
 import java.text.SimpleDateFormat;
+import android.provider.Settings;
 
 public class MainActivity extends Activity {
     ViewGroup mainRoot; ImageView wallpaperView;
@@ -26,8 +26,6 @@ public class MainActivity extends Activity {
     List<ResolveInfo> allAppsCache = new ArrayList<>();
     Handler mainH = new Handler(Looper.getMainLooper());
 
-    int getNavBarH(){ try{ int id=getResources().getIdentifier("navigation_bar_height","dimen","android"); if(id>0) return getResources().getDimensionPixelSize(id); }catch(Exception e){} return 0; }
-
     @Override protected void onCreate(Bundle s){
         super.onCreate(s);
         try{ getWindow().setStatusBarColor(Color.TRANSPARENT); getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);}catch(Exception e){}
@@ -37,11 +35,7 @@ public class MainActivity extends Activity {
             rvFavorites=findViewById(R.id.rvFavorites); rvSuggestions=findViewById(R.id.rvSuggestions);
             searchApps=findViewById(R.id.searchAppsMain); searchWeb=findViewById(R.id.searchWebMain);
             prefs=getSharedPreferences("quantum",MODE_PRIVATE); glassPrefs=getSharedPreferences("glass",MODE_PRIVATE);
-            loadFavs();
-            setupClock();
-            setupDockSafe();
-            setupFavsSafe();
-            setupListeners();
+            loadFavs(); setupClock(); setupDockSimple(); setupFavsSafe(); setupListeners();
             mainH.postDelayed(()->{ try{ preloadMaxSafe(); }catch(Exception e){} },800);
             checkDefault();
         }catch(Exception e){ Toast.makeText(this,"ONCREATE: "+e.getMessage(),1).show(); }
@@ -56,20 +50,25 @@ public class MainActivity extends Activity {
             }}; mainH.post(r);
         }catch(Exception e){}
     }
-    void setupDockSafe(){
+    void setupDockSimple(){
         try{
-            int[][] maps={{R.id.dPhone,"com.android.dialer","com.google.android.dialer"},{R.id.dMsg,"com.google.android.apps.messaging","com.android.mms"},{R.id.dCam,"com.android.camera2","com.google.android.GoogleCamera"},{R.id.dChrome,"com.android.chrome","com.google.android.apps.chrome"}};
-            for(int[] m:maps){
-                View vv=findViewById(m[0]); if(vv==null) continue;
-                ImageView iv=null; try{ iv=(ImageView)((FrameLayout)vv).getChildAt(0);}catch(Exception e){}
-                if(iv==null) continue;
-                String pkg=null;
-                for(int i=1;i<m.length;i++){ try{ getPackageManager().getPackageInfo(m[i],0); pkg=m[i]; break; }catch(Exception e){} }
-                if(pkg!=null){ try{ Drawable dr=getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager()); iv.setImageDrawable(dr); String fp=pkg; vv.setOnClickListener(vw->{ launchInstant(fp); }); }catch(Exception e){} }
-            }
+            setDockIcon(R.id.dPhone, new String[]{"com.android.dialer","com.google.android.dialer","com.samsung.android.dialer"});
+            setDockIcon(R.id.dMsg, new String[]{"com.google.android.apps.messaging","com.android.mms","com.samsung.android.messaging"});
+            setDockIcon(R.id.dCam, new String[]{"com.android.camera2","com.google.android.GoogleCamera","com.sec.android.app.camera"});
+            setDockIcon(R.id.dChrome, new String[]{"com.android.chrome","com.google.android.apps.chrome","org.mozilla.firefox"});
             View dd=findViewById(R.id.dDrawer); if(dd!=null) dd.setOnClickListener(v-> openFullDrawer());
             View de=findViewById(R.id.dExtra); if(de!=null) de.setOnClickListener(v-> openFullDrawer());
         }catch(Exception e){ Toast.makeText(this,"dock: "+e.getMessage(),0).show(); }
+    }
+    void setDockIcon(int viewId, String[] pkgs){
+        try{
+            View vv=findViewById(viewId); if(vv==null) return;
+            ImageView iv=null; try{ iv=(ImageView)((FrameLayout)vv).getChildAt(0);}catch(Exception e){ return; }
+            if(iv==null) return;
+            for(String p:pkgs){
+                try{ getPackageManager().getPackageInfo(p,0); Drawable dr=getPackageManager().getApplicationInfo(p,0).loadIcon(getPackageManager()); iv.setImageDrawable(dr); String fp=p; vv.setOnClickListener(vw-> launchInstant(fp)); return; }catch(Exception e){}
+            }
+        }catch(Exception e){}
     }
     void setupFavsSafe(){
         try{
@@ -103,7 +102,7 @@ public class MainActivity extends Activity {
                 LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>();
                 for(ResolveInfo ri:all){ try{ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);}catch(Exception e){} }
                 allAppsCache=new ArrayList<>(map.values());
-                mainH.post(()->{ try{ if(rvFavorites!=null) rvFavorites.getAdapter().notifyDataSetChanged(); }catch(Exception e){} });
+                mainH.post(()->{ try{ if(rvFavorites!=null && rvFavorites.getAdapter()!=null) rvFavorites.getAdapter().notifyDataSetChanged(); }catch(Exception e){} });
             }catch(Exception e){ mainH.post(()-> Toast.makeText(this,"preload: "+e.getMessage(),0).show()); }
         }).start();
     }
@@ -114,7 +113,7 @@ public class MainActivity extends Activity {
         try{
             AlertDialog.Builder b=new AlertDialog.Builder(this); b.setTitle("Apps");
             RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,4));
-            List<ResolveInfo> src=allAppsCache.isEmpty()?new ArrayList<>():allAppsCache;
+            List<ResolveInfo> src=allAppsCache;
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
                 public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); }
@@ -153,11 +152,10 @@ public class MainActivity extends Activity {
         try{
             new AlertDialog.Builder(this).setTitle("Menu").setItems(new String[]{"Couleur","Fond","Icon packs gratuits","Polices","Effacer fond"}, (d,w)->{
                 try{
-                    if(w==0) Toast.makeText(this,"Couleur - bientot",0).show();
-                    else if(w==1) pickWallpaper();
+                    if(w==1) pickWallpaper();
                     else if(w==2) showIconPack();
-                    else if(w==3) Toast.makeText(this,"Polices - bientot",0).show();
                     else if(w==4){ if(wallpaperView!=null) wallpaperView.setImageDrawable(null); }
+                    else Toast.makeText(this,"Bientot",0).show();
                 }catch(Exception e){}
             }).show();
         }catch(Exception e){}
@@ -168,7 +166,7 @@ public class MainActivity extends Activity {
             try{ packs.addAll(pm.queryIntentActivities(new Intent("org.adw.launcher.THEMES"),0)); }catch(Exception e){}
             try{ packs.addAll(pm.queryIntentActivities(new Intent("com.novalauncher.THEME"),0)); }catch(Exception e){}
             HashSet<String> seen=new HashSet<>(); LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
-            for(ResolveInfo ri:packs){ String pkg=ri.activityInfo.packageName; if(!seen.add(pkg)) continue; TextView tv=new TextView(this); tv.setText(ri.loadLabel(pm).toString()+" ("+pkg+")"); tv.setPadding(20,20,20,20); tv.setTextColor(Color.WHITE); tv.setOnClickListener(v-> Toast.makeText(this,"Pack: "+pkg+" (icon pack bientot)",0).show()); list.addView(tv); }
+            for(ResolveInfo ri:packs){ String pkg=ri.activityInfo.packageName; if(!seen.add(pkg)) continue; TextView tv=new TextView(this); tv.setText(ri.loadLabel(pm).toString()+" ("+pkg+")"); tv.setPadding(20,20,20,20); tv.setTextColor(Color.WHITE); tv.setOnClickListener(v-> Toast.makeText(this,"Pack: "+pkg,0).show()); list.addView(tv); }
             if(packs.isEmpty()){ TextView tv=new TextView(this); tv.setText("Aucun pack - installe Delta, Arcticons gratuit"); tv.setPadding(20,20,20,20); tv.setTextColor(Color.WHITE); list.addView(tv); }
             ScrollView sv=new ScrollView(this); sv.addView(list);
             new AlertDialog.Builder(this).setTitle("Icon packs").setView(sv).show();
@@ -176,8 +174,7 @@ public class MainActivity extends Activity {
     }
     void pickWallpaper(){ try{ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("image/*"); startActivityForResult(i,1001); }catch(Exception e){} }
     @Override protected void onActivityResult(int rc,int res,Intent data){ super.onActivityResult(rc,res,data); try{ if(rc==1001 && res==RESULT_OK && data!=null){ Uri uri=data.getData(); if(wallpaperView!=null) wallpaperView.setImageURI(uri); getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); prefs.edit().putString("wall_uri",uri.toString()).apply(); } }catch(Exception e){} }
-    void checkDefault(){ try{ Intent i=new Intent(Intent.ACTION_MAIN); i.addCategory(Intent.CATEGORY_HOME); i.addCategory(Intent.CATEGORY_DEFAULT); ResolveInfo ri=getPackageManager().resolveActivity(i,0); if(ri!=null && !ri.activityInfo.packageName.equals(getPackageName())){ new AlertDialog.Builder(this).setTitle("Launcher par defaut").setMessage("Definir Quantum comme launcher par defaut?").setPositiveButton("Oui", (d,w)->{ try{ startActivity(new Intent(Settings.ACTION_HOME_SETTINGS)); }catch(Exception e){} }).setNegativeButton("Non",null).show(); } }catch(Exception e){} }
-
+    void checkDefault(){ try{ Intent i=new Intent(Intent.ACTION_MAIN); i.addCategory(Intent.CATEGORY_HOME); i.addCategory(Intent.CATEGORY_DEFAULT); ResolveInfo ri=getPackageManager().resolveActivity(i,0); if(ri!=null && !ri.activityInfo.packageName.equals(getPackageName())){ new AlertDialog.Builder(this).setTitle("Launcher par defaut").setMessage("Definir Quantum?").setPositiveButton("Oui", (d,w)->{ try{ startActivity(new Intent(Settings.ACTION_HOME_SETTINGS)); }catch(Exception e){} }).setNegativeButton("Non",null).show(); } }catch(Exception e){} }
     class SuggAdapter extends RecyclerView.Adapter<SuggAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ ResolveInfo ri=suggList.get(pos); h.lb.setText(ri.loadLabel(getPackageManager()).toString()); h.ic.setImageDrawable(ri.loadIcon(getPackageManager())); h.itemView.setOnClickListener(v-> launchInstant(ri.activityInfo.packageName)); }catch(Exception e){} } public int getItemCount(){ return suggList.size(); } }
     class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; H(View v){super(v); ic=v.findViewById(R.id.icon);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ String pkg=favPkgs.get(pos); h.ic.setImageDrawable(getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager())); h.itemView.setOnClickListener(v-> launchInstant(pkg)); h.itemView.setOnLongClickListener(v->{ favPkgs.remove(pos); saveFavs(); notifyDataSetChanged(); return true; }); }catch(Exception e){} } public int getItemCount(){ return favPkgs.size(); } }
 }
