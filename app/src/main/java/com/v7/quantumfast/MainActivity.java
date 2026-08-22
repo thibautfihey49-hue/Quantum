@@ -64,7 +64,7 @@ public class MainActivity extends Activity {
         if(rvFav!=null){ rvFav.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL,false)); rvFav.setHasFixedSize(true); }
         if(rvFolders!=null){ rvFolders.setLayoutManager(new GridLayoutManager(this,4)); rvFolders.setHasFixedSize(true); }
 
-        hideSystemBubbles();
+        // hideSystemBubbles() DISABLED - causait écran noir
 
         View cl=findViewGlass("clearApps","btnClear","clear"); if(cl!=null) cl.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); });
         View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setOnClickListener(v->handleWeb());
@@ -84,10 +84,10 @@ public class MainActivity extends Activity {
             if(dock!=null){
                 dock.setVisibility(View.VISIBLE);
                 int nbh = getNavBarH();
-                dock.setPadding(0,0,0,nbh-40);
+                dock.setPadding(0,0,0,nbh);
                 ViewGroup.LayoutParams dlp = dock.getLayoutParams();
                 if(dlp instanceof ViewGroup.MarginLayoutParams){
-                    ((ViewGroup.MarginLayoutParams)dlp).bottomMargin = nbh-40;
+                    ((ViewGroup.MarginLayoutParams)dlp).bottomMargin = nbh;
                     ((ViewGroup.MarginLayoutParams)dlp).topMargin = 0;
                 }
                 dock.setLayoutParams(dlp);
