@@ -5,6 +5,7 @@ import android.os.*;
 import android.widget.*;
 import android.view.*;
 import android.content.*;
+import android.provider.Settings;
 import android.graphics.*;
 import android.graphics.drawable.*;
 import android.net.Uri;
@@ -57,13 +58,13 @@ public class MainActivity extends Activity {
     }
     void setupDockSafe(){
         try{
-            Object[][] maps={{R.id.dPhone,"com.android.dialer","com.google.android.dialer"},{R.id.dMsg,"com.google.android.apps.messaging","com.android.mms"},{R.id.dCam,"com.android.camera2","com.google.android.GoogleCamera"},{R.id.dChrome,"com.android.chrome","com.google.android.apps.chrome"}};
-            for(Object[] m:maps){
-                View vv=findViewById((int)m[0]); if(vv==null) continue;
+            int[][] maps={{R.id.dPhone,"com.android.dialer","com.google.android.dialer"},{R.id.dMsg,"com.google.android.apps.messaging","com.android.mms"},{R.id.dCam,"com.android.camera2","com.google.android.GoogleCamera"},{R.id.dChrome,"com.android.chrome","com.google.android.apps.chrome"}};
+            for(int[] m:maps){
+                View vv=findViewById(m[0]); if(vv==null) continue;
                 ImageView iv=null; try{ iv=(ImageView)((FrameLayout)vv).getChildAt(0);}catch(Exception e){}
                 if(iv==null) continue;
                 String pkg=null;
-                for(int i=1;i<m.length;i++){ try{ getPackageManager().getPackageInfo((String)m[i],0); pkg=(String)m[i]; break; }catch(Exception e){} }
+                for(int i=1;i<m.length;i++){ try{ getPackageManager().getPackageInfo(m[i],0); pkg=m[i]; break; }catch(Exception e){} }
                 if(pkg!=null){ try{ Drawable dr=getPackageManager().getApplicationInfo(pkg,0).loadIcon(getPackageManager()); iv.setImageDrawable(dr); String fp=pkg; vv.setOnClickListener(vw->{ launchInstant(fp); }); }catch(Exception e){} }
             }
             View dd=findViewById(R.id.dDrawer); if(dd!=null) dd.setOnClickListener(v-> openFullDrawer());
