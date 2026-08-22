@@ -1,5 +1,6 @@
 package com.v7.quantumfast;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.appwidget.AppWidgetHost;
 import android.appwidget.AppWidgetHostView;
@@ -28,7 +29,6 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -37,7 +37,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
     AppWidgetHost mAppWidgetHost;
     AppWidgetHost awHost;
     SharedPreferences prefs;
@@ -108,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
             loadDock();
         }catch(Exception e){
             TextView err = new TextView(this);
-            err.setText("Erreur demarrage: "+e.getMessage());
+            err.setText("Erreur: "+e.getMessage()+"\n"+android.util.Log.getStackTraceString(e));
             err.setTextColor(Color.WHITE);
             err.setPadding(30,100,30,30);
             setContentView(err);
@@ -142,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
     }
     void applyGlassTheme(int col){ try{ if(mainRoot!=null) mainRoot.setBackgroundColor(col); }catch(Exception e){} }
     void ensureFullCache(){}
-    void refreshFromSystemTheme(){ Toast.makeText(this,"Utilise Themes gratuits",0).show(); }
+    void refreshFromSystemTheme(){ Toast.makeText(this,"Themes gratuits",0).show(); }
     public void launchInstant(String pkg){ try{ Intent i=getPackageManager().getLaunchIntentForPackage(pkg); if(i!=null) startActivity(i); }catch(Exception e){} }
     void loadApps(){
         try{
@@ -185,11 +185,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }catch(Exception e){}
     }
-    void showManualTopPicker(){ try{ Context ctx=getDialogContext(); LinearLayout list=new LinearLayout(ctx); list.setOrientation(LinearLayout.VERTICAL); TextView r=new TextView(ctx); r.setText("Vider dock + widgets"); r.setTextColor(Color.WHITE); r.setPadding(30,30,30,30); r.setOnClickListener(v->{ prefs.edit().remove("dock_apps").remove("widgets").apply(); loadDock(); Toast.makeText(this,"Nettoye",0).show(); }); list.addView(r); createModernDialog("Mes apps fusee", list).show(); }catch(Exception e){} }
+    void showManualTopPicker(){ try{ Context ctx=getDialogContext(); LinearLayout list=new LinearLayout(ctx); list.setOrientation(LinearLayout.VERTICAL); TextView r=new TextView(ctx); r.setText("Vider dock"); r.setTextColor(Color.WHITE); r.setPadding(30,30,30,30); r.setOnClickListener(v->{ prefs.edit().remove("dock_apps").remove("widgets").apply(); loadDock(); Toast.makeText(this,"Nettoye",0).show(); }); list.addView(r); createModernDialog("Mes apps", list).show(); }catch(Exception e){} }
     void showQuantumUltra(){
         try{
             float dens=getResources().getDisplayMetrics().density; LinearLayout list=new LinearLayout(getDialogContext()); list.setOrientation(LinearLayout.VERTICAL);
-            String[] opts={"Couleur theme","Fond d'ecran","Effacer fond","Mes apps fusee","Themes d'icones gratuits","Polices + Fonds HD","Widget draggable"};
+            String[] opts={"Couleur theme","Fond d'ecran","Effacer fond","Mes apps","Themes icones gratuits","Polices + Fonds HD","Widget draggable"};
             for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(getDialogContext()); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK,14*dens,70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ try{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==2){ prefs.edit().remove("custom_wallpaper_uri").apply(); if(wallpaperView!=null) wallpaperView.setImageDrawable(null); } else if(idx==3) showManualTopPicker(); else if(idx==4) showIconPackPicker(); else if(idx==5) showFontsWallpapersPicker(); else if(idx==6) pickWidget(); }catch(Exception e){ Toast.makeText(this,e.getMessage(),1).show(); } }); list.addView(row); }
             createModernDialog("Quantum Ultra", list).show();
         }catch(Exception e){ Toast.makeText(this,"Menu: "+e.getMessage(),1).show(); }
@@ -209,9 +209,9 @@ public class MainActivity extends AppCompatActivity {
             PackageManager pm=getPackageManager(); List<ResolveInfo> packs=new ArrayList<>(); try{ packs.addAll(pm.queryIntentActivities(new Intent("org.adw.launcher.THEMES"),0)); }catch(Exception e){} try{ packs.addAll(pm.queryIntentActivities(new Intent("com.novalauncher.THEME"),0)); }catch(Exception e){}
             HashSet<String> seen=new HashSet<>();
             for(ResolveInfo ri: packs){ String pkg=ri.activityInfo.packageName; if(!seen.add(pkg)) continue; TextView row=new TextView(ctx); try{ row.setText(ri.loadLabel(pm)); }catch(Exception e){ row.setText(pkg); } row.setTextSize(15); row.setTextColor(Color.WHITE); row.setPadding(pad,pad,pad,pad); row.setOnClickListener(v->{ prefs.edit().putString("icon_pack",pkg).apply(); Toast.makeText(this,"Pack: "+pkg,0).show(); loadApps(); }); list.addView(row); }
-            if(packs.isEmpty()){ TextView tv=new TextView(ctx); tv.setText("Aucun pack - installe Delta, Pix, Arcticons gratuit"); tv.setTextColor(Color.WHITE); tv.setPadding(pad,pad,pad,pad); list.addView(tv); }
-            TextView more=new TextView(ctx); more.setText("Play Store packs gratuits"); more.setTextColor(0xFF00E5FF); more.setPadding(pad,pad*2,pad,pad); more.setOnClickListener(v->{ try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=free icon pack material you"))); }catch(Exception e){ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=free%20icon%20pack"))); } }); list.addView(more);
-            ScrollView sv=new ScrollView(ctx); sv.addView(list); createModernDialog("Themes d'icones gratuits", sv).show();
+            if(packs.isEmpty()){ TextView tv=new TextView(ctx); tv.setText("Aucun pack - installe Delta Pix Arcticons"); tv.setTextColor(Color.WHITE); tv.setPadding(pad,pad,pad,pad); list.addView(tv); }
+            TextView more=new TextView(ctx); more.setText("Play Store packs gratuits"); more.setTextColor(0xFF00E5FF); more.setPadding(pad,pad*2,pad,pad); more.setOnClickListener(v->{ try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=free icon pack"))); }catch(Exception e){ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=free icon pack"))); } }); list.addView(more);
+            ScrollView sv=new ScrollView(ctx); sv.addView(list); createModernDialog("Themes icones", sv).show();
         }catch(Exception e){ Toast.makeText(this,"Icon: "+e.getMessage(),1).show(); }
     }
     void showFontsWallpapersPicker(){
