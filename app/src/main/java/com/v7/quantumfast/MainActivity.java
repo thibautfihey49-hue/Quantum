@@ -29,6 +29,7 @@ public class MainActivity extends Activity {
     List<ResolveInfo> allAppsCache = new ArrayList<>();
     Handler mainH = new Handler(Looper.getMainLooper());
 
+    @Override protected void onResume(){ super.onResume(); try{ autoScanOnResume(); preloadMaxSafe(); scanThemeFilesFromAnyApp(); }catch(Exception e){} }
     @Override protected void onCreate(Bundle s){
         super.onCreate(s);
         try{ getWindow().setStatusBarColor(Color.TRANSPARENT); getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);}catch(Exception e){}
@@ -39,7 +40,11 @@ public class MainActivity extends Activity {
             searchApps=findViewById(R.id.searchAppsMain); searchWeb=findViewById(R.id.searchWebMain);
             prefs=getSharedPreferences("quantum",MODE_PRIVATE); glassPrefs=getSharedPreferences("glass",MODE_PRIVATE);
             loadFavs(); setupClock(); setupDockSimple(); setupFavsSafe(); setupListeners();
+            registerAutoDetect();
+            setupWallpaperAutoDetect();
             mainH.postDelayed(()->{ try{ preloadMaxSafe(); }catch(Exception e){} },800);
+            mainH.postDelayed(()->{ try{ autoScanOnResume(); }catch(Exception e){} },2000);
+            mainH.postDelayed(()->{ try{ scanThemeFilesFromAnyApp(); }catch(Exception e){} },3000);
             checkDefault();
         }catch(Exception e){ Toast.makeText(this,"ONCREATE: "+e.getMessage(),1).show(); }
     }
@@ -79,6 +84,222 @@ public class MainActivity extends Activity {
             if(rvSuggestions!=null){ rvSuggestions.setLayoutManager(new LinearLayoutManager(this)); rvSuggestions.setVisibility(View.GONE); }
         }catch(Exception e){}
     }
+
+    BroadcastReceiver pkgReceiver;
+
+    android.app.WallpaperManager wallpaperMgr;
+    android.app.WallpaperManager.OnColorsChangedListener wallpaperListener;
+    void setupWallpaperAutoDetect(){
+        try{
+            wallpaperMgr=android.app.WallpaperManager.getInstance(this);
+            if(android.os.Build.VERSION.SDK_INT>=27){
+                wallpaperListener=new android.app.WallpaperManager.OnColorsChangedListener(){
+                    public void onColorsChanged(android.app.WallpaperColors colors, int which){
+                        try{
+                            // L'utilisateur a choisi un theme dans n'importe quelle app (ThemeKit, ThemeArt etc) qui a change le fond
+                            // On recupere le wallpaper actuel et on l'applique + on adapte le theme d'icones auto
+                            android.graphics.drawable.Drawable wp=wallpaperMgr.getDrawable();
+                            if(wallpaperView!=null && wp!=null){
+                                mainH.post(()->{
+                                    try{
+                                        wallpaperView.setImageDrawable(wp);
+                                        // THEME COMPLET pas couleur complete
+                                        // 1. On scanne les icones que l'app externe vient de telecharger
+                                        scanThemeFilesFromAnyApp();
+                                        // 2. On passe en theme custom_full qui utilise les vrais icones du theme choisi dans l'app externe
+                                        setIconTheme("custom_full");
+                                        if(rvFavorites!=null) rvFavorites.setAdapter(new FavAdapter());
+                                        if(rvSuggestions!=null && rvSuggestions.getAdapter()!=null) rvSuggestions.getAdapter().notifyDataSetChanged();
+                                        // 3. On adapte juste le glass, pas les icones en couleur
+                                        if(colors!=null){
+                                            android.graphics.Color primary=colors.getPrimaryColor();
+                                            int col=primary.toArgb();
+                                            applyThemeColor(col);
+                                        }
+                                        Toast.makeText(MainActivity.this, "Theme COMPLET applique depuis app externe: fond + icones originales",1).show();
+                                    }catch(Exception e){}
+                                });
+                            }
+                        }catch(Exception e){}
+                    }
+                };
+                wallpaperMgr.addOnColorsChangedListener(wallpaperListener, mainH);
+            }
+        }catch(Exception e){}
+    }
+    void scanThemeFilesFromAnyApp(){
+        try{
+            new Thread(()->{
+                try{
+                    File customDir=getCustomIconDir();
+                    int imported=0;
+                    // GENERIQUE pour TOUTES les apps qui font des themes (pas que ThemeKit)
+                    // On scanne recursivement tous les endroits ou n'importe quelle app theme peut deposer des icones
+                    java.util.ArrayList<File> toScan=new java.util.ArrayList<>();
+                    try{
+                        toScan.add(android.os.Environment.getExternalStorageDirectory());
+                        toScan.add(new File(android.os.Environment.getExternalStorageDirectory()+"/Download"));
+                        toScan.add(new File(android.os.Environment.getExternalStorageDirectory()+"/Pictures"));
+                        toScan.add(new File(android.os.Environment.getExternalStorageDirectory()+"/DCIM"));
+                        toScan.add(new File(android.os.Environment.getExternalStorageDirectory()+"/Android/data"));
+                        if(getExternalFilesDir(null)!=null) toScan.add(getExternalFilesDir(null));
+                    }catch(Exception e){}
+
+                    for(File root: toScan){
+                        if(root==null || !root.exists()) continue;
+                        try{
+                            // scan 2 niveaux max pour pas etre trop lourd, mais couvre toutes les apps
+                            File[] level1=root.listFiles();
+                            if(level1==null) continue;
+                            for(File f1: level1){
+                                if(f1.isFile()){
+                                    String n=f1.getName().toLowerCase();
+                                    if((n.endsWith(".png") || n.endsWith(".jpg") || n.endsWith(".webp")) && f1.length()>1500 && f1.length()<800000){
+                                        // critere generique: nom contient com. ou icone ou theme ou ressemble a pack
+                                        String ln=n;
+                                        if(ln.contains("com.") || ln.contains("icon") || ln.contains("theme") || f1.getParent().toLowerCase().contains("theme") || f1.getParent().toLowerCase().contains("icon") || f1.getParent().toLowerCase().contains("widget") || f1.getParent().toLowerCase().contains("zedge") || f1.getParent().toLowerCase().contains("themepack") || f1.getParent().toLowerCase().contains("themkit") || f1.getParent().toLowerCase().contains("smart") || f1.getParent().toLowerCase().contains("niagara")){
+                                            File dest=new File(customDir, f1.getName());
+                                            if(!dest.exists()){
+                                                try{ java.nio.file.Files.copy(f1.toPath(), dest.toPath()); imported++; }catch(Exception ee){}
+                                            }
+                                        }
+                                    }
+                                } else if(f1.isDirectory()){
+                                    // niveau 2
+                                    File[] level2=f1.listFiles();
+                                    if(level2==null) continue;
+                                    for(File f2: level2){
+                                        if(f2.isFile()){
+                                            String n=f2.getName().toLowerCase();
+                                            if((n.endsWith(".png") || n.endsWith(".jpg")) && f2.length()>1500 && f2.length()<800000){
+                                                String lp=f2.getParent().toLowerCase();
+                                                if(lp.contains("theme") || lp.contains("icon") || lp.contains("pack") || n.contains("com.") || n.contains("ic_")){
+                                                    File dest=new File(customDir, f2.getName());
+                                                    if(!dest.exists()){
+                                                        try{ java.nio.file.Files.copy(f2.toPath(), dest.toPath()); imported++; }catch(Exception ee){}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }catch(Exception ee){}
+                    }
+                    // Aussi essayer d'extraire les icones direct depuis l'APK de n'importe quelle app theme installee
+                    try{
+                        PackageManager pm=getPackageManager();
+                        Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER);
+                        List<ResolveInfo> all=pm.queryIntentActivities(it,0);
+                        for(ResolveInfo ri: all){
+                            String pkg=ri.activityInfo.packageName;
+                            String low=pkg.toLowerCase();
+                            if(low.contains("theme") || low.contains("icon") || low.contains("zedge") || low.contains("widget") || low.contains("launcher") || low.contains("wallpaper")){
+                                try{
+                                    // on tente de lister les drawables de l'app (si c'est un icon pack)
+                                    android.content.res.Resources res=pm.getResourcesForApplication(pkg);
+                                    // pas besoin de tout lister, on se base sur le fait que l'app a deja ete copiee via son dossier data
+                                }catch(Exception e){}
+                            }
+                        }
+                    }catch(Exception e){}
+
+                    if(imported>0){
+                        int imp=imported;
+                        mainH.post(()->{
+                            try{
+                                setIconTheme("custom_full");
+                                if(rvFavorites!=null) rvFavorites.setAdapter(new FavAdapter());
+                                Toast.makeText(this, "Theme COMPLET generique importe: "+imp+" icones depuis n'importe quelle app theme",1).show();
+                            }catch(Exception e){}
+                        });
+                    }
+                }catch(Exception e){}
+            }).start();
+        }catch(Exception e){}
+    }
+
+    void registerAutoDetect(){
+        try{
+            IntentFilter filter=new IntentFilter();
+            filter.addAction(Intent.ACTION_PACKAGE_ADDED);
+            filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
+            filter.addDataScheme("package");
+            pkgReceiver=new BroadcastReceiver(){
+                public void onReceive(Context ctx, Intent intent){
+                    String pkg=intent.getData()!=null?intent.getData().getSchemeSpecificPart():"";
+                    if(pkg!=null && !pkg.isEmpty()){
+                        mainH.postDelayed(()-> autoDetectAnyApp(pkg), 1500);
+                    }
+                }
+            };
+            registerReceiver(pkgReceiver, filter);
+        }catch(Exception e){}
+    }
+    void autoDetectAnyApp(String pkg){
+        try{
+            if(pkg==null) return;
+            String low=pkg.toLowerCase();
+            if(low.contains("theme") || low.contains("icon") || low.contains("themepack") || low.contains("widget") || low.contains("zedge") || low.contains("niagara") || low.contains("smartlauncher") || low.contains("microsoft.launcher")){
+                PackageManager pm=getPackageManager();
+                try{
+                    ApplicationInfo ai=pm.getApplicationInfo(pkg,0);
+                    String label=pm.getApplicationLabel(ai).toString();
+                    new AlertDialog.Builder(this)
+                        .setTitle("Nouveau theme detecte")
+                        .setMessage("Theme installe: "+label+" ("+pkg+")\nVeux-tu l'appliquer automatiquement?\n\nDetection auto: Play Store -> app theme -> Quantum detecte seul, plus besoin d'aller dans Menu.")
+                        .setPositiveButton("Appliquer", (d,w)->{
+                            try{
+                                // try as icon pack if it declares theme intent
+                                List<ResolveInfo> themes=pm.queryIntentActivities(new Intent("org.adw.launcher.THEMES"),0);
+                                boolean isIconPack=false;
+                                for(ResolveInfo ri: themes){ if(ri.activityInfo.packageName.equals(pkg)){ isIconPack=true; break; } }
+                                if(isIconPack){ setIconPack(pkg); }
+                                else {
+                                    // for apps like Smart Launcher, ThemeKit etc, on extrait leur icone et fond
+                                    // on l'applique comme pack web
+                                    // on propose d'ouvrir l'app theme
+                                    Intent launch=pm.getLaunchIntentForPackage(pkg);
+                                    if(launch!=null) startActivity(launch);
+                                    Toast.makeText(this, "Theme ouvert: choisis un theme dedans, puis reviens, Quantum va l'importer auto",1).show();
+                                }
+                                // save as known
+                                glassPrefs.edit().putBoolean("known_"+pkg, true).apply();
+                            }catch(Exception ee){}
+                        })
+                        .setNegativeButton("Plus tard", null)
+                        .setNeutralButton("Ne plus demander pour cette app", (d,w)->{ glassPrefs.edit().putBoolean("ignore_"+pkg, true).apply(); })
+                        .show();
+                }catch(Exception e){}
+            }
+        }catch(Exception e){}
+    }
+    void autoScanOnResume(){
+        try{
+            new Thread(()->{
+                try{
+                    PackageManager pm=getPackageManager();
+                    Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER);
+                    List<ResolveInfo> all=pm.queryIntentActivities(it,0);
+                    // Trier par date d'install recente pour detecter la derniere app Play Store
+                    for(ResolveInfo ri: all){
+                        String pkg=ri.activityInfo.packageName;
+                        if(pkg.equals(getPackageName())) continue;
+                        if(glassPrefs.getBoolean("known_"+pkg,false) || glassPrefs.getBoolean("ignore_"+pkg,false)) continue;
+                        // Si c'est une app qu'on a jamais vue, c'est une nouvelle app Play Store
+                        // On detecte TOUT, pas que theme
+                        try{
+                            ApplicationInfo ai=pm.getApplicationInfo(pkg,0);
+                            // On considere comme nouvelle si pas connue
+                            mainH.post(()-> autoDetectAnyApp(pkg));
+                            break; // une seule popup a la fois
+                        }catch(Exception e){}
+                    }
+                }catch(Exception e){}
+            }).start();
+        }catch(Exception e){}
+    }
+
     void setupListeners(){
         try{
             TextView menu=findViewById(R.id.btnMenu); if(menu!=null) menu.setOnClickListener(v-> showMenu());
@@ -154,7 +375,26 @@ public class MainActivity extends Activity {
     int curColor=0xFF0A84FF; String curPack=""; String curFont="default"; String curIconTheme="system";
     String getIconTheme(){ return glassPrefs.getString("icon_theme","system"); }
     void setIconTheme(String theme){ glassPrefs.edit().putString("icon_theme",theme).apply(); curIconTheme=theme; if(rvFavorites!=null && rvFavorites.getAdapter()!=null) rvFavorites.getAdapter().notifyDataSetChanged(); Toast.makeText(this,"Theme complet: "+theme,0).show(); }
+    Drawable applyFullTheme(Drawable orig, String theme, ResolveInfo ri){
+        try{
+            // 1. Priorite: icones custom importees depuis l'app externe (ThemeKit etc) = theme complet vrai
+            Drawable custom=getCustomWebIcon(ri);
+            if(custom!=null) return custom;
+            // 2. Si theme = custom_full, on utilise custom
+            if(theme.equals("custom_full")){ Drawable c=getCustomWebIcon(ri); if(c!=null) return c; }
+            // 3. Sinon anciens filtres couleur (fallback)
+            if(orig==null) return null;
+            Drawable d=orig.mutate();
+            if(theme.equals("white_complete")){ d.setColorFilter(android.graphics.Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN); return d; }
+            if(theme.equals("black_complete")){ d.setColorFilter(android.graphics.Color.BLACK, android.graphics.PorterDuff.Mode.SRC_IN); return d; }
+            if(theme.equals("violet_glass")){ d.setColorFilter(0xFF6B4C8A, android.graphics.PorterDuff.Mode.SRC_IN); return d; }
+            if(theme.equals("blue_ios")){ d.setColorFilter(0xFF0A84FF, android.graphics.PorterDuff.Mode.SRC_IN); return d; }
+            if(theme.equals("neon")){ d.setColorFilter(0xFF00FF88, android.graphics.PorterDuff.Mode.SRC_IN); return d; }
+        }catch(Exception e){}
+        return orig;
+    }
     Drawable applyCompleteTheme(Drawable orig, String theme){
+
         try{
             if(orig==null) return null;
             Drawable d=orig.mutate();
@@ -285,8 +525,9 @@ public class MainActivity extends Activity {
         }catch(Exception e){ Toast.makeText(this, "import: "+e.getMessage(),0).show(); }
     }
     Drawable getDrawableFromPack(ResolveInfo ri){
+        try{ String theme=getIconTheme(); if(theme.equals("custom_full") || theme.equals("custom_web_full")){ Drawable full=applyFullTheme(null, theme, ri); if(full!=null) return full; } }catch(Exception e){}
         try{ Drawable custom=getCustomWebIcon(ri); if(custom!=null) return custom; }catch(Exception e){}
-        try{ String theme=getIconTheme(); if(!theme.equals("system") && !theme.equals("external")){ Drawable sys=null; try{ sys=ri.loadIcon(getPackageManager()); }catch(Exception e){} return applyCompleteTheme(sys, theme); } }catch(Exception e){}
+        try{ String theme=getIconTheme(); if(!theme.equals("system") && !theme.equals("external") && !theme.equals("custom_full")){ Drawable sys=null; try{ sys=ri.loadIcon(getPackageManager()); }catch(Exception e){} return applyCompleteTheme(sys, theme); } else if(theme.equals("custom_full")){ Drawable sys=null; try{ sys=ri.loadIcon(getPackageManager()); }catch(Exception e){} Drawable full=applyFullTheme(sys, theme, ri); if(full!=null) return full; } }catch(Exception e){}
 
         try{
             String pack=getIconPack(); if(pack.isEmpty()) return null;
