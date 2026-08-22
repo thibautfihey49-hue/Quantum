@@ -8,16 +8,16 @@ android {
         applicationId "com.v7.quantumfast"
         minSdk 26
         targetSdk 34
-        versionCode 15
-        versionName "15.39-STAGE3"
+        versionCode 16
+        versionName "16-STABLE"
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
     buildTypes {
+        debug { minifyEnabled false; debuggable true }
         release { minifyEnabled false }
-        debug { minifyEnabled false }
     }
 }
 dependencies {
