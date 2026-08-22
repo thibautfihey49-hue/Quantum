@@ -1,10 +1,6 @@
 
 package com.v7.quantumfast;
 import android.app.*;
-import android.appwidget.AppWidgetHost;
-import android.appwidget.AppWidgetHostView;
-import android.appwidget.AppWidgetManager;
-import android.appwidget.AppWidgetProviderInfo;
 import android.content.*;
 import android.content.pm.*;
 import android.graphics.*;
@@ -24,12 +20,8 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
-    ViewGroup mainRoot;
+    View mainRoot;
     EditText searchApps, searchWeb;
-    AppWidgetHost mAppWidgetHost;
-    AppWidgetHost awHost;
-    android.widget.ImageView wallpaperView;
-
     RecyclerView rvSugg, rvFav, rvFolders;
     SharedPreferences prefs, glassPrefs;
     List<ResolveInfo> suggList=new ArrayList<>();
@@ -50,9 +42,7 @@ public class MainActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
         prefs=getSharedPreferences("dock",0);
         glassPrefs=getSharedPreferences("glass",0);
-        mainRoot=(ViewGroup)findViewById(R.id.root);
-        try{ wallpaperView=(android.widget.ImageView)findViewById(R.id.wallpaper); }catch(Exception e){}
-        if(mAppWidgetHost==null){ mAppWidgetHost=new AppWidgetHost(this,1); mAppWidgetHost.startListening(); awHost=mAppWidgetHost; }
+        mainRoot=findViewById(R.id.root);
         searchApps=findViewById(R.id.searchAppsMain);
         searchWeb=findViewById(R.id.searchWebMain);
         rvSugg=findViewById(R.id.rvSuggestions);
@@ -64,7 +54,7 @@ public class MainActivity extends Activity {
         if(rvFav!=null){ rvFav.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL,false)); rvFav.setHasFixedSize(true); }
         if(rvFolders!=null){ rvFolders.setLayoutManager(new GridLayoutManager(this,4)); rvFolders.setHasFixedSize(true); }
 
-        // hideSystemBubbles() DISABLED - causait écran noir
+        // hideSystemBubbles() disabled for blackscreen
 
         View cl=findViewGlass("clearApps","btnClear","clear"); if(cl!=null) cl.setOnClickListener(v->{ if(searchApps!=null) searchApps.setText(""); });
         View go=findViewGlass("btnWebGo","go","web_go","btnGo"); if(go!=null) go.setOnClickListener(v->handleWeb());
@@ -218,62 +208,12 @@ public class MainActivity extends Activity {
     void showMenuModern(){
         float dens=getResources().getDisplayMetrics().density;
         LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
-        String[] opts={"🎨 Couleur thème","🖼️ Choisir fond d'écran","🧹 Effacer fond","🎨 Thèmes icônes gratuits","🔤 Polices + Fonds HD","🧩 Widget draggable (no crash)","ℹ️ À propos"};
-        for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ try{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==2){ prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findViewGlass("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); if(wallpaperView!=null) wallpaperView.setImageDrawable(null); Toast.makeText(this,"Fond effacé",0).show(); } else if(idx==3) showIconPackPicker(); else if(idx==4) showFontsWallpapersPicker(); else if(idx==5) pickWidget(); }catch(Exception e){ Toast.makeText(this,e.getMessage(),1).show(); } }); list.addView(row); }
+        String[] opts={"🎨 Couleur thème","🖼️ Choisir fond d'écran","🧹 Effacer fond","🎨 Thèmes icônes gratuits","🔤 Polices + Fonds HD","ℹ️ À propos"};
+        for(int i=0;i<opts.length;i++){ final int idx=i; TextView row=new TextView(this); row.setText(opts[i]); row.setTextSize(16); row.setTextColor(Color.WHITE); row.setPadding((int)(14*dens),(int)(16*dens),(int)(14*dens),(int)(16*dens)); row.setBackground(glassBg(Color.BLACK, 14*dens, 70)); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,(int)(10*dens)); row.setLayoutParams(lp); row.setOnClickListener(v->{ try{ if(idx==0) showPaletteModern(); else if(idx==1) pickWallpaper(); else if(idx==2){ prefs.edit().remove("custom_wallpaper_uri").apply(); View bg=findViewGlass("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageDrawable(null); Toast.makeText(this,"Fond effacé",0).show(); } else if(idx==3) showIconPackPickerSafe(); else if(idx==4) showFontsWallpapersPickerSafe(); }catch(Exception e){ Toast.makeText(this,e.getMessage(),1).show(); } }); list.addView(row); }
         AlertDialog dlg=createModernDialog("Menu", list); dlg.show();
     }
-    // === NOUVELLES FONCTIONS FUSIONNEES ===
-    void showIconPackPicker(){
-        try{
-            Context ctx=new ContextThemeWrapper(this, android.R.style.Theme_Material_Light_Dialog_Alert);
-            LinearLayout list=new LinearLayout(ctx); list.setOrientation(LinearLayout.VERTICAL); int pad=(int)(getResources().getDisplayMetrics().density*12);
-            PackageManager pm=getPackageManager(); List<ResolveInfo> packs=new ArrayList<>(); try{ packs.addAll(pm.queryIntentActivities(new Intent("org.adw.launcher.THEMES"),0)); }catch(Exception e){} try{ packs.addAll(pm.queryIntentActivities(new Intent("com.novalauncher.THEME"),0)); }catch(Exception e){}
-            java.util.HashSet<String> seen=new java.util.HashSet<>();
-            for(ResolveInfo ri: packs){ String pkg=ri.activityInfo.packageName; if(!seen.add(pkg)) continue; TextView row=new TextView(ctx); try{ row.setText(ri.loadLabel(pm)); }catch(Exception e){ row.setText(pkg); } row.setTextSize(15); row.setTextColor(Color.WHITE); row.setPadding(pad,pad,pad,pad); row.setOnClickListener(v->{ prefs.edit().putString("icon_pack",pkg).apply(); Toast.makeText(this,"Pack: "+pkg,0).show(); iconCache.evictAll(); preloadMax(); }); list.addView(row); }
-            if(packs.isEmpty()){ TextView tv=new TextView(ctx); tv.setText("Aucun pack - installe Delta, Pix, Arcticons gratuit"); tv.setTextColor(Color.WHITE); tv.setPadding(pad,pad,pad,pad); list.addView(tv); }
-            TextView more=new TextView(ctx); more.setText("➕ Play Store packs gratuits"); more.setTextColor(0xFF00E5FF); more.setPadding(pad,pad*2,pad,pad); more.setOnClickListener(v->{ try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=free icon pack material you"))); }catch(Exception e){ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=free%20icon%20pack"))); } }); list.addView(more);
-            ScrollView sv=new ScrollView(ctx); sv.addView(list); createModernDialog("Thèmes d'icônes gratuits", sv).show();
-        }catch(Exception e){ Toast.makeText(this,"Icon: "+e.getMessage(),1).show(); }
-    }
-    void showFontsWallpapersPicker(){
-        try{
-            Context ctx=new ContextThemeWrapper(this, android.R.style.Theme_Material_Light_Dialog_Alert);
-            LinearLayout root=new LinearLayout(ctx); root.setOrientation(LinearLayout.VERTICAL); int pad=(int)(getResources().getDisplayMetrics().density*12);
-            TextView h1=new TextView(ctx); h1.setText("🔤 Polices Google"); h1.setTextColor(Color.WHITE); h1.setTextSize(16); h1.setPadding(pad,pad,pad,pad/2); root.addView(h1);
-            String[][] fonts={{"Poppins","https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Regular.ttf"},{"Montserrat","https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat-Regular.ttf"},{"Nunito","https://github.com/google/fonts/raw/main/ofl/nunito/Nunito-Regular.ttf"}};
-            for(String[] f: fonts){ TextView row=new TextView(ctx); row.setText("• "+f[0]); row.setTextColor(Color.WHITE); row.setPadding(pad*2,pad/2,pad,pad/2); row.setOnClickListener(v-> downloadFont(f[0], f[1])); root.addView(row); }
-            TextView h2=new TextView(ctx); h2.setText("\n🖼️ Fonds HD"); h2.setTextColor(Color.WHITE); h2.setTextSize(16); h2.setPadding(pad,pad,pad,pad/2); root.addView(h2);
-            TextView rw=new TextView(ctx); rw.setText("• Aléatoire HD 1080x1920"); rw.setTextColor(0xFF00E5FF); rw.setPadding(pad*2,pad/2,pad,pad/2); rw.setOnClickListener(v-> downloadWallpaper("https://picsum.photos/1080/1920")); root.addView(rw);
-            ScrollView sv=new ScrollView(ctx); sv.addView(root); createModernDialog("Polices + Fonds", sv).show();
-        }catch(Exception e){}
-    }
-    void downloadFont(String name, String url){
-        new Thread(()->{ try{ java.io.File dir=new java.io.File(getFilesDir(),"fonts"); dir.mkdirs(); java.io.File out=new java.io.File(dir,name+".ttf"); java.io.InputStream in=new java.net.URL(url).openStream(); java.io.FileOutputStream fos=new java.io.FileOutputStream(out); byte[] b=new byte[8192]; int r; while((r=in.read(b))!=-1) fos.write(b,0,r); fos.close(); in.close(); runOnUiThread(()->{ prefs.edit().putString("custom_font_path",out.getAbsolutePath()).apply(); Toast.makeText(this,"Police "+name+" OK",0).show(); }); }catch(Exception e){ runOnUiThread(()-> Toast.makeText(this,"Font err: "+e.getMessage(),1).show()); } }).start();
-    }
-    void downloadWallpaper(String url){
-        new Thread(()->{ try{ java.io.InputStream in=new java.net.URL(url).openStream(); android.graphics.Bitmap bmp=android.graphics.BitmapFactory.decodeStream(in); in.close(); runOnUiThread(()->{ if(wallpaperView!=null) wallpaperView.setImageBitmap(bmp); View bg=findViewGlass("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageBitmap(bmp); Toast.makeText(this,"Fond appliqué",0).show(); }); }catch(Exception e){ runOnUiThread(()-> Toast.makeText(this,"Wall err: "+e.getMessage(),1).show()); } }).start();
-    }
-    void pickWidget(){
-        try{
-            AppWidgetManager awm=AppWidgetManager.getInstance(this); List<AppWidgetProviderInfo> providers=awm.getInstalledProviders(); if(providers.isEmpty()){ Toast.makeText(this,"Aucun widget",0).show(); return; }
-            Context ctx=new ContextThemeWrapper(this, android.R.style.Theme_Material_Light_Dialog_Alert);
-            LinearLayout list=new LinearLayout(ctx); list.setOrientation(LinearLayout.VERTICAL); int pad=(int)(getResources().getDisplayMetrics().density*12);
-            if(mAppWidgetHost==null){ mAppWidgetHost=new AppWidgetHost(this,1); mAppWidgetHost.startListening(); } awHost=mAppWidgetHost;
-            for(AppWidgetProviderInfo info: providers){
-                TextView row=new TextView(ctx); try{ row.setText(info.loadLabel(getPackageManager())); }catch(Exception e){ row.setText(info.provider.getPackageName()); } row.setTextSize(15); row.setTextColor(Color.WHITE); row.setPadding(pad,pad,pad,pad);
-                row.setOnClickListener(v->{ try{ int id=mAppWidgetHost.allocateAppWidgetId(); boolean b=awm.bindAppWidgetIdIfAllowed(id, info.provider); if(!b){ Intent bi=new Intent(AppWidgetManager.ACTION_APPWIDGET_BIND); bi.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id); bi.putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER,info.provider); startActivityForResult(bi,9002); } else{ addWidgetView(id, info); } }catch(Exception e){ Toast.makeText(this,"W: "+e.getMessage(),1).show(); } });
-                list.addView(row);
-            }
-            ScrollView sv=new ScrollView(ctx); sv.addView(list); createModernDialog("Choisir widget (sans crash Oppo)", sv).show();
-        }catch(Exception e){ Toast.makeText(this,"Widget: "+e.getMessage(),1).show(); }
-    }
-    void addWidgetView(int appWidgetId, AppWidgetProviderInfo info){
-        try{ AppWidgetHostView hv=mAppWidgetHost.createView(this, appWidgetId, info); hv.setAppWidget(appWidgetId, info); if(mainRoot!=null){ mainRoot.addView(hv); makeWidgetDraggable(hv); saveWidget(appWidgetId); } }catch(Exception e){ Toast.makeText(this,"Add: "+e.getMessage(),1).show(); }
-    }
-    void makeWidgetDraggable(View v){ try{ v.setOnTouchListener(new View.OnTouchListener(){ float dx,dy; public boolean onTouch(View vv, android.view.MotionEvent ev){ try{ switch(ev.getAction()){ case android.view.MotionEvent.ACTION_DOWN: dx=vv.getX()-ev.getRawX(); dy=vv.getY()-ev.getRawY(); return true; case android.view.MotionEvent.ACTION_MOVE: vv.setX(ev.getRawX()+dx); vv.setY(ev.getRawY()+dy); return true; } }catch(Exception e){} return false; } }); }catch(Exception e){} }
-    void saveWidget(int id){ try{ String cur=prefs.getString("widgets",""); if(!cur.contains(String.valueOf(id))){ if(!cur.isEmpty()) cur+=","; cur+=id; prefs.edit().putString("widgets",cur).apply(); } }catch(Exception e){} }
 
-    void showPaletteModern(){
+        void showPaletteModern(){
         float dens=getResources().getDisplayMetrics().density;
         GridLayout grid=new GridLayout(this); grid.setColumnCount(5);
         int[] cols={ 0xFF7C4DFF, 0xFF00E5FF, 0xFF00E676, 0xFFFF4081, 0xFF9575CD, 0xFF42A5F5, 0xFF212121, 0xFFFFFFFF, 0xFFF44336, 0xFFE91E63, 0xFF9C27B0, 0xFF673AB7, 0xFF3F51B5, 0xFF2196F3, 0xFF03A9F4, 0xFF00BCD4, 0xFF009688, 0xFF4CAF50, 0xFF8BC34A, 0xFFCDDC39, 0xFFFFEB3B, 0xFFFFC107, 0xFFFF9800, 0xFFFF5722, 0xFF795548, 0xFF9E9E9E, 0xFF607D8B, 0xFFFFD700, 0xFFDC143C, 0xFF40E0D0, 0xFF2ECC71, 0xFF0F52BA, 0xFF9B111E, 0xFFC0C0C0, 0xFF8A2BE2, 0xFF00FF88 };
@@ -344,21 +284,7 @@ public class MainActivity extends Activity {
 
     View findViewGlass(String...names){ for(String n:names){ int id=getResources().getIdentifier(n,"id",getPackageName()); if(id!=0){ View v=findViewById(id); if(v!=null) return v; } } return null; }
     void loadWallpaperFast(){ try{ String s=prefs.getString("custom_wallpaper_uri",""); if(s.isEmpty()) return; Uri uri=Uri.parse(s); View bg=findViewGlass("wallpaper","bg","background","wall","wallpaperView"); if(bg instanceof ImageView){ ((ImageView)bg).setScaleType(ImageView.ScaleType.CENTER_CROP); ((ImageView)bg).setImageURI(uri); } }catch(Exception e){} }
-    @Override protected void onActivityResult(int rc,int res,Intent data){
-        if(rc==9002 && res==RESULT_OK && data!=null){
-            try{
-                int id=data.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,-1);
-                AppWidgetManager awm=AppWidgetManager.getInstance(this);
-                AppWidgetProviderInfo info=awm.getAppWidgetInfo(id);
-                if(info!=null) addWidgetView(id, info);
-            }catch(Exception e){}
-            return;
-        }
-        if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri u=data.getData(); try{ getContentResolver().takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri",u.toString()).apply(); loadWallpaperFast(); }
-    }
-    @Override protected void onStart(){ super.onStart(); try{ if(mAppWidgetHost!=null) mAppWidgetHost.startListening(); }catch(Exception e){} }
-    @Override protected void onStop(){ super.onStop(); try{ if(mAppWidgetHost!=null) mAppWidgetHost.stopListening(); }catch(Exception e){} }
-
+    @Override protected void onActivityResult(int rc,int res,Intent data){ if(rc==201 && res==RESULT_OK && data!=null && data.getData()!=null){ Uri u=data.getData(); try{ getContentResolver().takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception e){} prefs.edit().putString("custom_wallpaper_uri",u.toString()).apply(); loadWallpaperFast(); } }
 
     void setupAtAGlance(){ TextView c=(TextView)findViewGlass("clock","time"); TextView d=(TextView)findViewGlass("date","dateInfo"); SimpleDateFormat tf=new SimpleDateFormat("HH:mm",Locale.FRANCE); SimpleDateFormat df=new SimpleDateFormat("EEE dd MMM",Locale.FRANCE); Runnable r=new Runnable(){public void run(){ try{ if(c!=null) c.setText(tf.format(new Date())); if(d!=null) d.setText(df.format(new Date()).toUpperCase()+" • Paris"); }catch(Exception e){} if(mainRoot!=null) mainRoot.postDelayed(this,30000); }}; r.run(); }
 
@@ -431,4 +357,35 @@ public class MainActivity extends Activity {
     class FolderAdapter extends RecyclerView.Adapter<FolderAdapter.H>{ class H extends RecyclerView.ViewHolder{ TextView lb; ImageView ic; H(View v){super(v); lb=v.findViewById(R.id.label); ic=v.findViewById(R.id.icon);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ Folder fo=folders.get(pos); h.lb.setText(fo.name); } public int getItemCount(){ return folders.size(); } }
 
     int getNavBarH(){ try{ android.content.res.Resources res=getResources(); int id=res.getIdentifier("navigation_bar_height","dimen","android"); if(id>0) return res.getDimensionPixelSize(id); }catch(Exception e){} return 0; }
+
+    void showIconPackPickerSafe(){
+        try{
+            LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); int pad=(int)(getResources().getDisplayMetrics().density*12);
+            PackageManager pm=getPackageManager(); List<ResolveInfo> packs=new ArrayList<>(); try{ packs.addAll(pm.queryIntentActivities(new Intent("org.adw.launcher.THEMES"),0)); }catch(Exception e){} try{ packs.addAll(pm.queryIntentActivities(new Intent("com.novalauncher.THEME"),0)); }catch(Exception e){}
+            java.util.HashSet<String> seen=new java.util.HashSet<>();
+            for(ResolveInfo ri: packs){ String pkg=ri.activityInfo.packageName; if(!seen.add(pkg)) continue; TextView row=new TextView(this); try{ row.setText(ri.loadLabel(pm)); }catch(Exception e){ row.setText(pkg); } row.setTextSize(15); row.setTextColor(Color.WHITE); row.setPadding(pad,pad,pad,pad); row.setOnClickListener(v->{ prefs.edit().putString("icon_pack",pkg).apply(); Toast.makeText(this,"Pack: "+pkg+" - relance",0).show(); iconCache.evictAll(); preloadMax(); }); list.addView(row); }
+            if(packs.isEmpty()){ TextView tv=new TextView(this); tv.setText("Aucun pack - installe Delta, Pix, Arcticons (gratuit)"); tv.setTextColor(Color.WHITE); tv.setPadding(pad,pad,pad,pad); list.addView(tv); }
+            TextView more=new TextView(this); more.setText("➕ Chercher packs gratuits sur Play"); more.setTextColor(0xFF00E5FF); more.setPadding(pad,pad*2,pad,pad); more.setOnClickListener(v->{ try{ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=free icon pack material you"))); }catch(Exception e){ startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=free%20icon%20pack"))); } }); list.addView(more);
+            ScrollView sv=new ScrollView(this); sv.addView(list); createModernDialog("Thèmes d'icônes gratuits", sv).show();
+        }catch(Exception e){ Toast.makeText(this,"Icon: "+e.getMessage(),1).show(); }
+    }
+    void showFontsWallpapersPickerSafe(){
+        try{
+            LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); int pad=(int)(getResources().getDisplayMetrics().density*12);
+            TextView h1=new TextView(this); h1.setText("🔤 Polices Google (offline)"); h1.setTextColor(Color.WHITE); h1.setTextSize(16); h1.setPadding(pad,pad,pad,pad/2); root.addView(h1);
+            String[][] fonts={{"Poppins","https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Regular.ttf"},{"Montserrat","https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat-Regular.ttf"},{"Nunito","https://github.com/google/fonts/raw/main/ofl/nunito/Nunito-Regular.ttf"}};
+            for(String[] f: fonts){ TextView row=new TextView(this); row.setText("• "+f[0]+" - télécharger"); row.setTextColor(Color.WHITE); row.setPadding(pad*2,pad/2,pad,pad/2); row.setOnClickListener(v-> downloadFontSafe(f[0], f[1])); root.addView(row); }
+            TextView h2=new TextView(this); h2.setText("\n🖼️ Fonds HD"); h2.setTextColor(Color.WHITE); h2.setTextSize(16); h2.setPadding(pad,pad,pad,pad/2); root.addView(h2);
+            TextView rw=new TextView(this); rw.setText("• Aléatoire HD 1080x1920 (Picsum)"); rw.setTextColor(0xFF00E5FF); rw.setPadding(pad*2,pad/2,pad,pad/2); rw.setOnClickListener(v-> downloadWallpaperSafe("https://picsum.photos/1080/1920")); root.addView(rw);
+            ScrollView sv=new ScrollView(this); sv.addView(root); createModernDialog("Polices + Fonds", sv).show();
+        }catch(Exception e){}
+    }
+    void downloadFontSafe(String name, String url){
+        new Thread(()->{ try{ java.io.File dir=new java.io.File(getFilesDir(),"fonts"); dir.mkdirs(); java.io.File out=new java.io.File(dir,name+".ttf"); java.io.InputStream in=new java.net.URL(url).openStream(); java.io.FileOutputStream fos=new java.io.FileOutputStream(out); byte[] b=new byte[8192]; int r; while((r=in.read(b))!=-1) fos.write(b,0,r); fos.close(); in.close(); runOnUiThread(()->{ prefs.edit().putString("custom_font_path",out.getAbsolutePath()).apply(); Toast.makeText(this,"Police "+name+" OK - redémarre",0).show(); }); }catch(Exception e){ runOnUiThread(()-> Toast.makeText(this,"Font err: "+e.getMessage(),1).show()); } }).start();
+    }
+    void downloadWallpaperSafe(String url){
+        new Thread(()->{ try{ java.io.InputStream in=new java.net.URL(url).openStream(); android.graphics.Bitmap bmp=android.graphics.BitmapFactory.decodeStream(in); in.close(); runOnUiThread(()->{ View bg=findViewGlass("wallpaper","bg","background","wall"); if(bg instanceof ImageView) ((ImageView)bg).setImageBitmap(bmp); Toast.makeText(this,"Fond appliqué",0).show(); }); }catch(Exception e){ runOnUiThread(()-> Toast.makeText(this,"Wall err: "+e.getMessage(),1).show()); } }).start();
+    }
+
 }
+
