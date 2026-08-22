@@ -13,6 +13,9 @@ import android.content.SharedPreferences;
 import android.util.LruCache;
 import androidx.recyclerview.widget.*;
 import java.util.*;
+import java.io.*;
+import java.net.*;
+import java.util.zip.*;
 import java.text.SimpleDateFormat;
 import android.provider.Settings;
 
@@ -148,11 +151,120 @@ public class MainActivity extends Activity {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
         }catch(Exception e){}
     }
-    int curColor=0xFF0A84FF; String curPack=""; String curFont="default";
+    int curColor=0xFF0A84FF; String curPack=""; String curFont="default"; String curIconTheme="system";
+    String getIconTheme(){ return glassPrefs.getString("icon_theme","system"); }
+    void setIconTheme(String theme){ glassPrefs.edit().putString("icon_theme",theme).apply(); curIconTheme=theme; if(rvFavorites!=null && rvFavorites.getAdapter()!=null) rvFavorites.getAdapter().notifyDataSetChanged(); Toast.makeText(this,"Theme complet: "+theme,0).show(); }
+    Drawable applyCompleteTheme(Drawable orig, String theme){
+        try{
+            if(orig==null) return null;
+            Drawable d=orig.mutate();
+            if(theme.equals("white_complete")){ d.setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN); return d; }
+            if(theme.equals("black_complete")){ d.setColorFilter(Color.BLACK, android.graphics.PorterDuff.Mode.SRC_IN); return d; }
+            if(theme.equals("violet_glass")){ d.setColorFilter(0xFF6B4C8A, android.graphics.PorterDuff.Mode.SRC_IN); return d; }
+            if(theme.equals("blue_ios")){ d.setColorFilter(0xFF0A84FF, android.graphics.PorterDuff.Mode.SRC_IN); return d; }
+            if(theme.equals("neon")){ d.setColorFilter(0xFF00FF88, android.graphics.PorterDuff.Mode.SRC_IN); return d; }
+            if(theme.equals("pastel")){ return d; }
+        }catch(Exception e){}
+        return orig;
+    }
     void applyThemeColor(int col){ try{ glassPrefs.edit().putInt("glass_color",col).apply(); if(mainRoot!=null) mainRoot.setBackgroundColor(Color.argb(40, Color.red(col), Color.green(col), Color.blue(col))); }catch(Exception e){} }
     String getIconPack(){ return glassPrefs.getString("icon_pack",""); }
-    void setIconPack(String pkg){ glassPrefs.edit().putString("icon_pack",pkg).apply(); if(rvFavorites!=null && rvFavorites.getAdapter()!=null) rvFavorites.getAdapter().notifyDataSetChanged(); }
+    void setIconPack(String pkg){ glassPrefs.edit().putString("icon_pack",pkg).putString("icon_theme","external").apply(); curIconTheme="external"; curPack=pkg; if(rvFavorites!=null && rvFavorites.getAdapter()!=null) rvFavorites.getAdapter().notifyDataSetChanged(); }
+    File getCustomIconDir(){ File d=new File(getFilesDir(), "custom_icons"); if(!d.exists()) d.mkdirs(); return d; }
+    Drawable getCustomWebIcon(ResolveInfo ri){
+        try{
+            File dir=getCustomIconDir();
+            String pkg=ri.activityInfo.packageName;
+            // 1. direct file com.pkg.png
+            File f=new File(dir, pkg+".png");
+            if(f.exists()) return Drawable.createFromPath(f.getAbsolutePath());
+            File f2=new File(dir, pkg.toLowerCase()+".png");
+            if(f2.exists()) return Drawable.createFromPath(f2.getAbsolutePath());
+            // 2. map.txt mapping
+            File map=new File(dir, "map.txt");
+            if(map.exists()){
+                BufferedReader br=new BufferedReader(new FileReader(map));
+                String line; while((line=br.readLine())!=null){ if(line.startsWith(pkg+"=")){ String fn=line.substring(line.indexOf("=")+1); File mf=new File(dir, fn); if(mf.exists()){ Drawable dd=Drawable.createFromPath(mf.getAbsolutePath()); if(dd!=null){ br.close(); return dd; } } } } br.close();
+            }
+            // 3. try any file that contains package name
+            File[] files=dir.listFiles(); if(files!=null){ for(File ff:files){ if(ff.getName().toLowerCase().contains(pkg.toLowerCase()) && ff.getName().endsWith(".png")){ return Drawable.createFromPath(ff.getAbsolutePath()); } } }
+        }catch(Exception e){}
+        return null;
+    }
+    void downloadAndApplyPack(String urlStr){
+        try{
+            ProgressDialog pd=new ProgressDialog(this); pd.setMessage("Téléchargement "+urlStr); pd.setCancelable(false); pd.show();
+            new Thread(()->{
+                try{
+                    URL url=new URL(urlStr);
+                    HttpURLConnection conn=(HttpURLConnection)url.openConnection(); conn.setConnectTimeout(15000); conn.setReadTimeout(30000);
+                    InputStream is=conn.getInputStream();
+                    File tmp=new File(getCacheDir(), "temp_pack.zip");
+                    FileOutputStream fos=new FileOutputStream(tmp);
+                    byte[] buf=new byte[8192]; int len; while((len=is.read(buf))>0) fos.write(buf,0,len);
+                    fos.close(); is.close();
+                    int count=unzipCustomPack(tmp);
+                    mainH.post(()->{ try{ pd.dismiss(); Toast.makeText(this, "Importé "+count+" icones depuis web",1).show(); if(rvFavorites!=null) rvFavorites.setAdapter(new FavAdapter()); }catch(Exception e){} });
+                }catch(Exception e){ mainH.post(()->{ try{ pd.dismiss(); Toast.makeText(this, "Erreur download: "+e.getMessage(),1).show(); }catch(Exception ee){} }); }
+            }).start();
+        }catch(Exception e){ Toast.makeText(this, "URL invalide",0).show(); }
+    }
+    int unzipCustomPack(File zipFile){
+        int count=0;
+        try{
+            File dir=getCustomIconDir();
+            ZipInputStream zis=new ZipInputStream(new FileInputStream(zipFile));
+            ZipEntry entry; HashMap<String,String> map=new HashMap<>();
+            while((entry=zis.getNextEntry())!=null){
+                String name=entry.getName();
+                if(entry.isDirectory()){ zis.closeEntry(); continue; }
+                String lower=name.toLowerCase();
+                if(lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".webp")){
+                    String outName=new File(name).getName();
+                    File out=new File(dir, outName);
+                    FileOutputStream fos=new FileOutputStream(out);
+                    byte[] buf=new byte[8192]; int len; while((len=zis.read(buf))>0) fos.write(buf,0,len);
+                    fos.close(); count++;
+                } else if(lower.endsWith("appfilter.xml") || lower.endsWith("drawable.xml")){
+                    // save then parse
+                    File out=new File(dir, "appfilter.xml");
+                    FileOutputStream fos=new FileOutputStream(out);
+                    byte[] buf=new byte[8192]; int len; while((len=zis.read(buf))>0) fos.write(buf,0,len);
+                    fos.close();
+                    // parse appfilter to build map
+                    try{ FileInputStream fis=new FileInputStream(out); String xml=new String(fis.readAllBytes()); fis.close();
+                        // simple parse <item component="ComponentInfo{com.pkg/..." drawable="icon_name"
+                        java.util.regex.Pattern pat=java.util.regex.Pattern.compile("component=\"[^\"]*\{([^/]+)/[^\"]*\}[^\"]*\"[^>]*drawable=\"([^\"]+)\"");
+                        java.util.regex.Matcher m=pat.matcher(xml);
+                        while(m.find()){ String pkg=m.group(1); String draw=m.group(2); map.put(pkg, draw+".png"); }
+                    }catch(Exception ee){}
+                }
+                zis.closeEntry();
+            }
+            zis.close();
+            // save map.txt
+            if(!map.isEmpty()){
+                File mapFile=new File(dir, "map.txt");
+                BufferedWriter bw=new BufferedWriter(new FileWriter(mapFile, false));
+                for(Map.Entry<String,String> e: map.entrySet()){ bw.write(e.getKey()+"="+e.getValue()); bw.newLine(); }
+                bw.close();
+            }
+        }catch(Exception e){ Toast.makeText(this, "Unzip erreur: "+e.getMessage(),0).show(); }
+        return count;
+    }
+    void showWebImportDialog(){
+        try{
+            LinearLayout lay=new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); lay.setPadding(30,30,30,30);
+            TextView info=new TextView(this); info.setText("Télécharge des icones depuis le web (GitHub, site d'icon packs) et applique les.\n\n1. Colle URL d'un ZIP (ex: Arcticons release zip, ou pack perso)\n2. Ou choisis un ZIP local\n\nLe ZIP doit contenir des PNG nommés com.package.png ou un appfilter.xml"); info.setTextColor(Color.LTGRAY); info.setTextSize(12); lay.addView(info);
+            EditText et=new EditText(this); et.setHint("https://github.com/.../icons.zip"); et.setTextColor(Color.WHITE); et.setHintTextColor(Color.GRAY); lay.addView(et);
+            TextView examples=new TextView(this); examples.setText("\nExemples gratuits complets:\n- Arcticons: github.com/ArcticonsTeam/Arcticons\n- Delta: github.com/Delta-Icons/Delta\n- Whicons: github.com/whicons/whicons\n- Sur icones8.com, iconscout.com tu peux DL des PNG et les renommer com.app.png"); examples.setTextColor(Color.CYAN); examples.setTextSize(11); lay.addView(examples);
+            new AlertDialog.Builder(this).setTitle("📥 Importer depuis le web").setView(lay).setPositiveButton("Télécharger URL", (d,w)->{ String url=et.getText().toString().trim(); if(!url.isEmpty()) downloadAndApplyPack(url); }).setNeutralButton("Choisir ZIP local", (d,w)->{ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("application/zip"); i.addCategory(Intent.CATEGORY_OPENABLE); i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/zip","application/x-zip","application/octet-stream"}); startActivityForResult(i,1002); }).setNegativeButton("Annuler",null).show();
+        }catch(Exception e){ Toast.makeText(this, "import: "+e.getMessage(),0).show(); }
+    }
     Drawable getDrawableFromPack(ResolveInfo ri){
+        try{ Drawable custom=getCustomWebIcon(ri); if(custom!=null) return custom; }catch(Exception e){}
+        try{ String theme=getIconTheme(); if(!theme.equals("system") && !theme.equals("external")){ Drawable sys=null; try{ sys=ri.loadIcon(getPackageManager()); }catch(Exception e){} return applyCompleteTheme(sys, theme); } }catch(Exception e){}
+
         try{
             String pack=getIconPack(); if(pack.isEmpty()) return null;
             PackageManager pm=getPackageManager();
@@ -203,30 +315,60 @@ public class MainActivity extends Activity {
             }).show();
         }catch(Exception e){}
     }
+    
     void showIconPack(){
         try{
-            PackageManager pm=getPackageManager(); List<ResolveInfo> packs=new ArrayList<>();
+            PackageManager pm=getPackageManager();
+            List<ResolveInfo> packs=new ArrayList<>();
             try{ packs.addAll(pm.queryIntentActivities(new Intent("org.adw.launcher.THEMES"),0)); }catch(Exception e){}
             try{ packs.addAll(pm.queryIntentActivities(new Intent("com.novalauncher.THEME"),0)); }catch(Exception e){}
             try{ packs.addAll(pm.queryIntentActivities(new Intent("com.gau.go.launcherex.theme"),0)); }catch(Exception e){}
-            HashSet<String> seen=new HashSet<>(); LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
-            // option default
-            TextView def=new TextView(this); def.setText("✓ Icones systeme (defaut)"); def.setPadding(30,30,30,30); def.setTextColor(Color.WHITE); def.setOnClickListener(v->{ setIconPack(""); Toast.makeText(this,"Pack systeme",0).show(); }); list.addView(def);
+            try{ packs.addAll(pm.queryIntentActivities(new Intent("com.anddoes.launcher.THEME"),0)); }catch(Exception e){}
+            HashSet<String> seen=new HashSet<>();
+            LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
+            list.setPadding(10,10,10,10);
+            String curTheme=getIconTheme();
+            String curPack=getIconPack();
+
+            TextView webBtn=new TextView(this); webBtn.setText("📥 IMPORTER DEPUIS LE WEB / FICHIER ZIP"); webBtn.setTextColor(Color.BLACK); webBtn.setBackgroundColor(Color.YELLOW); webBtn.setPadding(30,30,30,30); webBtn.setTypeface(null, android.graphics.Typeface.BOLD); webBtn.setOnClickListener(v->{ showWebImportDialog(); }); list.addView(webBtn);
+            File customDir=getCustomIconDir(); int customCount=customDir.listFiles()!=null?customDir.listFiles().length:0;
+            TextView customInfo=new TextView(this); customInfo.setText("Pack web actuel: "+customCount+" icones dans "+customDir.getAbsolutePath()); customInfo.setTextColor(Color.LTGRAY); customInfo.setPadding(20,10,20,20); customInfo.setTextSize(11); list.addView(customInfo);
+
+
+            TextView title1=new TextView(this); title1.setText("THEMES COMPLETS INTEGRES (100% apps)"); title1.setTextColor(Color.YELLOW); title1.setPadding(20,30,20,10); title1.setTypeface(null, android.graphics.Typeface.BOLD); list.addView(title1);
+            String[][] themes={{"system","Systeme defaut"},{"white_complete","Blanc complet (tout en blanc)"},{"black_complete","Noir complet"},{"violet_glass","Violet Glass complet (comme ton dock)"},{"blue_ios","Bleu iOS complet"},{"neon","Neon complet"},{"pastel","Pastel Glass + fond"}};
+            for(String[] th:themes){
+                TextView tv=new TextView(this); boolean sel=th[0].equals(curTheme); tv.setText((sel?"▶ ":"  ")+th[1]); tv.setPadding(30,26,30,26); tv.setTextColor(sel?Color.CYAN:Color.WHITE); tv.setTextSize(15);
+                String t=th[0]; tv.setOnClickListener(v->{ setIconTheme(t); if(rvFavorites!=null) rvFavorites.setAdapter(new FavAdapter()); });
+                list.addView(tv);
+            }
+
+            TextView title2=new TextView(this); title2.setText("\nPACKS EXTERNES GRATUITS - LES PLUS COMPLETS"); title2.setTextColor(Color.YELLOW); title2.setPadding(20,30,20,10); title2.setTypeface(null, android.graphics.Typeface.BOLD); list.addView(title2);
+            TextView hint=new TextView(this); hint.setText("Recommandes: Whicons (2732 icones, masquage auto, tout theme), Delta (2400+), Arcticons (6000+, le plus complet), CandyCons (1000+), Voxel (1900), Pix Material You. Cherche sur Play: 'Delta Icon Pack', 'Whicons', 'Arcticons'"); hint.setTextColor(Color.LTGRAY); hint.setPadding(20,10,20,20); hint.setTextSize(12); list.addView(hint);
+
+            TextView def=new TextView(this); boolean selSys=curTheme.equals("system") && curPack.isEmpty(); def.setText((selSys?"▶ ":"  ")+"Systeme (sans pack)"); def.setPadding(30,26,30,26); def.setTextColor(selSys?Color.CYAN:Color.WHITE); def.setOnClickListener(v->{ setIconTheme("system"); setIconPack(""); Toast.makeText(this,"Icones systeme",0).show(); }); list.addView(def);
+
             for(ResolveInfo ri:packs){
                 String pkg=ri.activityInfo.packageName; if(!seen.add(pkg)) continue;
-                TextView tv=new TextView(this); tv.setText(ri.loadLabel(pm).toString()+" ("+pkg+")"); tv.setPadding(30,30,30,30); tv.setTextColor(Color.WHITE);
-                tv.setOnClickListener(v->{ setIconPack(pkg); Toast.makeText(this,"Pack applique: "+pkg,0).show(); });
+                boolean sel=pkg.equals(curPack) && curTheme.equals("external");
+                TextView tv=new TextView(this); tv.setText((sel?"▶ ":"  ")+ri.loadLabel(pm).toString()+" ("+pkg+")"); tv.setPadding(30,26,30,26); tv.setTextColor(sel?Color.CYAN:Color.WHITE);
+                tv.setOnClickListener(v->{ setIconPack(pkg); Toast.makeText(this,"Pack applique: "+pkg+" - masquage auto pour les apps non themées",0).show(); if(rvFavorites!=null) rvFavorites.setAdapter(new FavAdapter()); });
                 list.addView(tv);
             }
             if(seen.isEmpty()){
-                TextView tv=new TextView(this); tv.setText("Aucun pack detecte. Installe sur Play: Delta Icon Pack, Arcticons, Whicons (gratuits)"); tv.setPadding(20,20,20,20); tv.setTextColor(Color.WHITE); list.addView(tv);
+                TextView tv=new TextView(this); tv.setText("Aucun pack externe installe.\nInstalle gratuitement: Delta Icon Pack, Whicons, Arcticons (le plus complet du monde, 6000+ icones)"); tv.setPadding(20,20,20,20); tv.setTextColor(Color.WHITE); list.addView(tv);
             }
+
             ScrollView sv=new ScrollView(this); sv.addView(list);
-            new AlertDialog.Builder(this).setTitle("Icon packs gratuits").setView(sv).setNegativeButton("Fermer",null).show();
+            new AlertDialog.Builder(this).setTitle("Themes complets - 100% des apps").setView(sv).setNegativeButton("Fermer",null).show();
         }catch(Exception e){ Toast.makeText(this,"packs: "+e.getMessage(),0).show(); }
     }
+
     void pickWallpaper(){ try{ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("image/*"); startActivityForResult(i,1001); }catch(Exception e){} }
-    @Override protected void onActivityResult(int rc,int res,Intent data){ super.onActivityResult(rc,res,data); try{ if(rc==1001 && res==RESULT_OK && data!=null){ Uri uri=data.getData(); if(wallpaperView!=null) wallpaperView.setImageURI(uri); getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); prefs.edit().putString("wall_uri",uri.toString()).apply(); } }catch(Exception e){} }
+    @Override protected void onActivityResult(int rc,int res,Intent data){ super.onActivityResult(rc,res,data); try{
+            if(rc==1001 && res==RESULT_OK && data!=null){ Uri uri=data.getData(); if(wallpaperView!=null) wallpaperView.setImageURI(uri); getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); prefs.edit().putString("wall_uri",uri.toString()).apply(); }
+            else if(rc==1002 && res==RESULT_OK && data!=null){ Uri uri=data.getData(); try{ InputStream is=getContentResolver().openInputStream(uri); File tmp=new File(getCacheDir(), "import_local.zip"); FileOutputStream fos=new FileOutputStream(tmp); byte[] buf=new byte[8192]; int len; while((len=is.read(buf))>0) fos.write(buf,0,len); fos.close(); is.close(); int c=unzipCustomPack(tmp); Toast.makeText(this, "Importé "+c+" icones local",1).show(); if(rvFavorites!=null) rvFavorites.setAdapter(new FavAdapter()); }catch(Exception e){ Toast.makeText(this, "Import local erreur: "+e.getMessage(),1).show(); } }
+        }catch(Exception e){} }
     void checkDefault(){ try{ Intent i=new Intent(Intent.ACTION_MAIN); i.addCategory(Intent.CATEGORY_HOME); i.addCategory(Intent.CATEGORY_DEFAULT); ResolveInfo ri=getPackageManager().resolveActivity(i,0); if(ri!=null && !ri.activityInfo.packageName.equals(getPackageName())){ new AlertDialog.Builder(this).setTitle("Launcher par defaut").setMessage("Definir Quantum?").setPositiveButton("Oui", (d,w)->{ try{ startActivity(new Intent(Settings.ACTION_HOME_SETTINGS)); }catch(Exception e){} }).setNegativeButton("Non",null).show(); } }catch(Exception e){} }
     class SuggAdapter extends RecyclerView.Adapter<SuggAdapter.H>{ class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} } public H onCreateViewHolder(ViewGroup p,int t){ return new H(getLayoutInflater().inflate(R.layout.item_app,p,false)); } public void onBindViewHolder(H h,int pos){ try{ ResolveInfo ri=suggList.get(pos); h.lb.setText(ri.loadLabel(getPackageManager()).toString()); Drawable d=getDrawableFromPack(ri); if(d==null) d=ri.loadIcon(getPackageManager()); h.ic.setImageDrawable(d); h.itemView.setOnClickListener(v-> launchInstant(ri.activityInfo.packageName)); }catch(Exception e){} } public int getItemCount(){ return suggList.size(); } }
     class FavAdapter extends RecyclerView.Adapter<FavAdapter.H>{
