@@ -167,6 +167,8 @@ public class MainActivity extends AppCompatActivity {
     }
     void applyGlassTheme(int col){ if(mainRoot!=null) mainRoot.setBackgroundColor(col); }
     void ensureFullCache(){}
+ public void launchInstant(String pkg){ try{ android.content.Intent i=getPackageManager().getLaunchIntentForPackage(pkg); if(i!=null) startActivity(i); }catch(Exception e){} }
+
     void refreshFromSystemTheme(){ Toast.makeText(this,"Utilise Thèmes gratuits",0).show(); }
 
     void loadApps(){
