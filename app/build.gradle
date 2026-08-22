@@ -16,9 +16,10 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
     buildTypes {
-        debug { minifyEnabled false; debuggable true }
+        debug { minifyEnabled false }
         release { minifyEnabled false }
     }
+    packaging { resources { excludes += '/META-INF/{AL2.0,LGPL2.1}' } }
 }
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
