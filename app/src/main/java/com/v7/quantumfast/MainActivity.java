@@ -231,12 +231,26 @@ public class MainActivity extends Activity {
                     FileOutputStream fos=new FileOutputStream(out);
                     byte[] buf=new byte[8192]; int len; while((len=zis.read(buf))>0) fos.write(buf,0,len);
                     fos.close();
-                    // parse appfilter to build map
-                    try{ FileInputStream fis=new FileInputStream(out); String xml=new String(fis.readAllBytes()); fis.close();
-                        // simple parse <item component="ComponentInfo{com.pkg/..." drawable="icon_name"
-                        java.util.regex.Pattern pat=java.util.regex.Pattern.compile("component=\"[^\"]*\{([^/]+)/[^\"]*\}[^\"]*\"[^>]*drawable=\"([^\"]+)\"");
-                        java.util.regex.Matcher m=pat.matcher(xml);
-                        while(m.find()){ String pkg=m.group(1); String draw=m.group(2); map.put(pkg, draw+".png"); }
+                    // parse appfilter to build map - simple without regex to avoid escape bugs
+                    try{
+                        FileInputStream fis=new FileInputStream(out);
+                        String xml=new String(fis.readAllBytes());
+                        fis.close();
+                        int idx=0;
+                        while((idx=xml.indexOf("component=", idx))!=-1){
+                            int start=xml.indexOf("{", idx);
+                            int slash=xml.indexOf("/", start);
+                            int endBrace=xml.indexOf("}", slash);
+                            int drawIdx=xml.indexOf("drawable=", endBrace);
+                            if(start==-1 || slash==-1 || endBrace==-1 || drawIdx==-1) break;
+                            String pkg=xml.substring(start+1, slash);
+                            int q1=xml.indexOf("\"", drawIdx);
+                            int q2=xml.indexOf("\"", q1+1);
+                            if(q1==-1 || q2==-1) break;
+                            String draw=xml.substring(q1+1, q2);
+                            if(!pkg.isEmpty() && !draw.isEmpty()) map.put(pkg, draw+".png");
+                            idx=q2;
+                        }
                     }catch(Exception ee){}
                 }
                 zis.closeEntry();
