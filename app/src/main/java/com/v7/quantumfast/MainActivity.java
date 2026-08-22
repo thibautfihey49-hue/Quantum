@@ -1,15 +1,15 @@
 package com.v7.quantumfast;
+import android.app.Activity;
 import android.os.Bundle;
 import android.widget.TextView;
-import androidx.appcompat.app.AppCompatActivity;
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         TextView tv = new TextView(this);
-        tv.setText("QUANTUM OK - si tu vois ça, MainActivity marche");
-        tv.setTextSize(20);
-        tv.setPadding(50,200,50,50);
+        tv.setText("QUANTUM OK - QuantumApp fixé");
+        tv.setTextSize(22);
+        tv.setPadding(50,300,50,50);
         setContentView(tv);
     }
     public void launchInstant(String pkg){}
