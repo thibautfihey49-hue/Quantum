@@ -159,8 +159,9 @@ public class MainActivity extends Activity {
     }
     void openFullDrawer(){
         try{
-            List<ResolveInfo> src=allAppsCache;
-            if(src.isEmpty()){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);} src=new ArrayList<>(map.values()); }
+            List<ResolveInfo> srcTmp=allAppsCache;
+            if(srcTmp.isEmpty()){ Intent it=new Intent(Intent.ACTION_MAIN); it.addCategory(Intent.CATEGORY_LAUNCHER); List<ResolveInfo> all=getPackageManager().queryIntentActivities(it,0); LinkedHashMap<String,ResolveInfo> map=new LinkedHashMap<>(); for(ResolveInfo ri:all){ if(!map.containsKey(ri.activityInfo.packageName)) map.put(ri.activityInfo.packageName,ri);} srcTmp=new ArrayList<>(map.values()); }
+            final List<ResolveInfo> src=srcTmp;
             RecyclerView rv=new RecyclerView(this); rv.setLayoutManager(new GridLayoutManager(this,4)); rv.setPadding(12,12,12,12); rv.setHasFixedSize(true);
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>(){
                 class H extends RecyclerView.ViewHolder{ ImageView ic; TextView lb; H(View v){super(v); ic=v.findViewById(R.id.icon); lb=v.findViewById(R.id.label);} }
