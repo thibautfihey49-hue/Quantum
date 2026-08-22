@@ -197,7 +197,16 @@ public class MainActivity extends Activity {
             new Thread(()->{
                 try{
                     URL url=new URL(urlStr);
-                    HttpURLConnection conn=(HttpURLConnection)url.openConnection(); conn.setConnectTimeout(15000); conn.setReadTimeout(30000);
+                    HttpURLConnection conn=(HttpURLConnection)url.openConnection();
+                    conn.setInstanceFollowRedirects(true);
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android)");
+                    conn.setConnectTimeout(15000); conn.setReadTimeout(30000);
+                    conn.setUseCaches(false);
+                    int codeResp=conn.getResponseCode();
+                    if(codeResp==301 || codeResp==302 || codeResp==303){
+                        String newUrl=conn.getHeaderField("Location");
+                        if(newUrl!=null){ url=new URL(newUrl); conn=(HttpURLConnection)url.openConnection(); conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android)"); }
+                    }
                     InputStream is=conn.getInputStream();
                     File tmp=new File(getCacheDir(), "temp_pack.zip");
                     FileOutputStream fos=new FileOutputStream(tmp);
@@ -231,7 +240,7 @@ public class MainActivity extends Activity {
                     FileOutputStream fos=new FileOutputStream(out);
                     byte[] buf=new byte[8192]; int len; while((len=zis.read(buf))>0) fos.write(buf,0,len);
                     fos.close();
-                    // parse appfilter to build map - simple without regex to avoid escape bugs
+                    // parse appfilter to build map - simple parser sans regex (fix illegal escape)
                     try{
                         FileInputStream fis=new FileInputStream(out);
                         String xml=new String(fis.readAllBytes());
@@ -249,7 +258,7 @@ public class MainActivity extends Activity {
                             if(q1==-1 || q2==-1) break;
                             String draw=xml.substring(q1+1, q2);
                             if(!pkg.isEmpty() && !draw.isEmpty()) map.put(pkg, draw+".png");
-                            idx=q2;
+                            idx=q2+1;
                         }
                     }catch(Exception ee){}
                 }
@@ -271,7 +280,7 @@ public class MainActivity extends Activity {
             LinearLayout lay=new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); lay.setPadding(30,30,30,30);
             TextView info=new TextView(this); info.setText("Télécharge des icones depuis le web (GitHub, site d'icon packs) et applique les.\n\n1. Colle URL d'un ZIP (ex: Arcticons release zip, ou pack perso)\n2. Ou choisis un ZIP local\n\nLe ZIP doit contenir des PNG nommés com.package.png ou un appfilter.xml"); info.setTextColor(Color.LTGRAY); info.setTextSize(12); lay.addView(info);
             EditText et=new EditText(this); et.setHint("https://github.com/.../icons.zip"); et.setTextColor(Color.WHITE); et.setHintTextColor(Color.GRAY); lay.addView(et);
-            TextView examples=new TextView(this); examples.setText("\nExemples gratuits complets:\n- Arcticons: github.com/ArcticonsTeam/Arcticons\n- Delta: github.com/Delta-Icons/Delta\n- Whicons: github.com/whicons/whicons\n- Sur icones8.com, iconscout.com tu peux DL des PNG et les renommer com.app.png"); examples.setTextColor(Color.CYAN); examples.setTextSize(11); lay.addView(examples);
+            TextView examples=new TextView(this); examples.setText("\nURLs qui MARCHENT (copie-colle):\n- Arcticons complet: https://github.com/ArcticonsTeam/Arcticons/archive/refs/heads/main.zip\n- Delta: https://github.com/Delta-Icons/Delta/archive/refs/heads/master.zip\n- Astuce: si GitHub bloque, DL le ZIP sur Chrome puis importe en local avec bouton ZIP local\n- Tu peux aussi zipper tes propres PNG nommes com.app.png"); examples.setTextColor(Color.CYAN); examples.setTextSize(11); lay.addView(examples);
             new AlertDialog.Builder(this).setTitle("📥 Importer depuis le web").setView(lay).setPositiveButton("Télécharger URL", (d,w)->{ String url=et.getText().toString().trim(); if(!url.isEmpty()) downloadAndApplyPack(url); }).setNeutralButton("Choisir ZIP local", (d,w)->{ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("application/zip"); i.addCategory(Intent.CATEGORY_OPENABLE); i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/zip","application/x-zip","application/octet-stream"}); startActivityForResult(i,1002); }).setNegativeButton("Annuler",null).show();
         }catch(Exception e){ Toast.makeText(this, "import: "+e.getMessage(),0).show(); }
     }
