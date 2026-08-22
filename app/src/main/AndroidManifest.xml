@@ -14,6 +14,7 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
     </queries>
+    <uses-permission android:name="android.permission.BIND_APPWIDGET" />
     <application android:name=".QuantumApp" android:allowBackup="true" android:icon="@drawable/ic_launcher" android:label="Quantum" android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen" android:requestLegacyExternalStorage="true" android:hardwareAccelerated="true" android:largeHeap="true">
         <activity
  android:name=".MainActivity"

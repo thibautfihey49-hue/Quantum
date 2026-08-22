@@ -29,7 +29,7 @@ public class MainActivity extends Activity {
     List<ResolveInfo> allAppsCache = new ArrayList<>();
     Handler mainH = new Handler(Looper.getMainLooper());
 
-    @Override protected void onResume(){ super.onResume(); try{ autoScanOnResume(); preloadMaxSafe(); scanThemeFilesFromAnyApp(); }catch(Exception e){} }
+    @Override protected void onResume(){ super.onResume(); try{ autoScanOnResume(); preloadMaxSafe(); scanThemeFilesFromAnyApp(); loadWidgets(); }catch(Exception e){} }
     @Override protected void onCreate(Bundle s){
         super.onCreate(s);
         try{ getWindow().setStatusBarColor(Color.TRANSPARENT); getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);}catch(Exception e){}
@@ -40,6 +40,7 @@ public class MainActivity extends Activity {
             searchApps=findViewById(R.id.searchAppsMain); searchWeb=findViewById(R.id.searchWebMain);
             prefs=getSharedPreferences("quantum",MODE_PRIVATE); glassPrefs=getSharedPreferences("glass",MODE_PRIVATE);
             loadFavs(); setupClock(); setupDockSimple(); setupFavsSafe(); setupListeners();
+            setupWidgetHost();
             registerAutoDetect();
             setupWallpaperAutoDetect();
             mainH.postDelayed(()->{ try{ preloadMaxSafe(); }catch(Exception e){} },800);
@@ -211,6 +212,132 @@ public class MainActivity extends Activity {
                                 setIconTheme("custom_full");
                                 if(rvFavorites!=null) rvFavorites.setAdapter(new FavAdapter());
                                 Toast.makeText(this, "Theme COMPLET generique importe: "+imp+" icones depuis n'importe quelle app theme",1).show();
+                            }catch(Exception e){}
+                        });
+                    }
+                }catch(Exception e){}
+            }).start();
+        }catch(Exception e){}
+    }
+
+
+    android.appwidget.AppWidgetManager widgetManager;
+    android.appwidget.AppWidgetHost widgetHost;
+    static final int WIDGET_HOST_ID=9001;
+    static final int REQ_PICK_WIDGET=1101;
+    static final int REQ_CREATE_WIDGET=1102;
+    android.widget.LinearLayout widgetContainer;
+
+    void setupWidgetHost(){
+        try{
+            widgetManager=android.appwidget.AppWidgetManager.getInstance(this);
+            widgetHost=new android.appwidget.AppWidgetHost(this, WIDGET_HOST_ID);
+            widgetHost.startListening();
+            widgetContainer=findViewById(R.id.widgetContainer);
+            if(widgetContainer==null){
+                // si pas dans layout, on le cree et on l'ajoute au root
+                try{
+                    android.view.ViewGroup root=findViewById(R.id.root);
+                    if(root!=null){
+                        widgetContainer=new android.widget.LinearLayout(this);
+                        widgetContainer.setId(android.view.View.generateViewId());
+                        widgetContainer.setOrientation(android.widget.LinearLayout.VERTICAL);
+                        root.addView(widgetContainer, 0);
+                    }
+                }catch(Exception e){}
+            }
+            loadWidgets();
+        }catch(Exception e){}
+    }
+    void loadWidgets(){
+        try{
+            if(widgetManager==null || widgetHost==null || widgetContainer==null) return;
+            widgetContainer.removeAllViews();
+            java.util.List<Integer> ids=glassPrefs.getString("widget_ids","").isEmpty()?new java.util.ArrayList<>():new java.util.ArrayList<>();
+            String saved=glassPrefs.getString("widget_ids","");
+            if(saved.isEmpty()) return;
+            for(String s: saved.split(",")){
+                try{
+                    int id=Integer.parseInt(s);
+                    android.appwidget.AppWidgetProviderInfo info=widgetManager.getAppWidgetInfo(id);
+                    if(info!=null){
+                        android.appwidget.AppWidgetHostView hv=widgetHost.createView(this, id, info);
+                        hv.setAppWidget(id, info);
+                        widgetContainer.addView(hv);
+                    }
+                }catch(Exception e){}
+            }
+        }catch(Exception e){}
+    }
+    void saveWidgetId(int id){
+        try{
+            String cur=glassPrefs.getString("widget_ids","");
+            java.util.Set<String> set=new java.util.HashSet<>(java.util.Arrays.asList(cur.split(",")));
+            set.add(String.valueOf(id));
+            set.remove("");
+            glassPrefs.edit().putString("widget_ids", String.join(",", set)).apply();
+        }catch(Exception e){}
+    }
+    void pickWidgetFromAnyApp(){
+        try{
+            int id=widgetHost.allocateAppWidgetId();
+            Intent pick=new Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_PICK);
+            pick.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+            startActivityForResult(pick, REQ_PICK_WIDGET);
+        }catch(Exception e){ Toast.makeText(this, "Widgets non supportes sur cet appareil",0).show(); }
+    }
+    void scanWidgetsFromAnyThemeApp(){
+        try{
+            new Thread(()->{
+                try{
+                    android.appwidget.AppWidgetManager wm=android.appwidget.AppWidgetManager.getInstance(MainActivity.this);
+                    java.util.List<android.appwidget.AppWidgetProviderInfo> all=wm.getInstalledProviders();
+                    java.util.ArrayList<android.appwidget.AppWidgetProviderInfo> themeWidgets=new java.util.ArrayList<>();
+                    for(android.appwidget.AppWidgetProviderInfo info: all){
+                        String pkg=info.provider.getPackageName().toLowerCase();
+                        if(pkg.contains("theme") || pkg.contains("widget") || pkg.contains("iwidget") || pkg.contains("themkit") || pkg.contains("themepack") || pkg.contains("zedge") || pkg.contains("smart") || pkg.contains("niagara") || pkg.contains("microsoft") || pkg.contains("clock") || pkg.contains("weather")){
+                            themeWidgets.add(info);
+                        }
+                    }
+                    if(themeWidgets.size()>0){
+                        mainH.post(()->{
+                            try{
+                                LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
+                                TextView title=new TextView(this); title.setText("Widgets detectes depuis toutes tes apps theme ("+themeWidgets.size()+")"); title.setTextColor(android.graphics.Color.YELLOW); title.setPadding(20,20,20,20); list.addView(title);
+                                for(android.appwidget.AppWidgetProviderInfo info: themeWidgets){
+                                    try{
+                                        String label=info.loadLabel(getPackageManager());
+                                        String pkg=info.provider.getPackageName();
+                                        TextView tv=new TextView(this); tv.setText("📱 "+label+" ("+pkg+")"); tv.setTextColor(android.graphics.Color.CYAN); tv.setPadding(30,20,30,20); tv.setBackgroundColor(0x22FFFFFF);
+                                        tv.setOnClickListener(v->{
+                                            try{
+                                                int id=widgetHost.allocateAppWidgetId();
+                                                Intent intent=new Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_BIND);
+                                                intent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+                                                intent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider);
+                                                startActivityForResult(intent, REQ_CREATE_WIDGET);
+                                                saveWidgetId(id);
+                                            }catch(Exception e){
+                                                try{
+                                                    int id=widgetHost.allocateAppWidgetId();
+                                                    boolean bound=widgetManager.bindAppWidgetIdIfAllowed(id, info.provider);
+                                                    if(bound){
+                                                        android.appwidget.AppWidgetHostView hv=widgetHost.createView(MainActivity.this, id, info);
+                                                        hv.setAppWidget(id, info);
+                                                        if(widgetContainer!=null) widgetContainer.addView(hv);
+                                                        saveWidgetId(id);
+                                                        Toast.makeText(MainActivity.this, "Widget ajoute: "+label,0).show();
+                                                    } else {
+                                                        pickWidgetFromAnyApp();
+                                                    }
+                                                }catch(Exception ee){}
+                                            }
+                                        });
+                                        list.addView(tv);
+                                    }catch(Exception e){}
+                                }
+                                ScrollView sv=new ScrollView(this); sv.addView(list);
+                                new AlertDialog.Builder(this).setTitle("Widgets Theme - toutes apps").setView(sv).setNegativeButton("Fermer",null).setPositiveButton("Ajouter widget", (d,w)-> pickWidgetFromAnyApp()).show();
                             }catch(Exception e){}
                         });
                     }
@@ -577,14 +704,15 @@ public class MainActivity extends Activity {
     
     void showMenu(){
         try{
-            new AlertDialog.Builder(this).setTitle("Menu").setItems(new String[]{"Theme Store Gratuit (altern. Oppo)","Couleur","Fond HD","Icon packs gratuits","Polices + Taille","Effacer fond"}, (d,w)->{
+            new AlertDialog.Builder(this).setTitle("Menu").setItems(new String[]{"Theme Store Gratuit (altern. Oppo)","Widgets de toutes apps theme","Couleur","Fond HD","Icon packs gratuits","Polices + Taille","Effacer fond"}, (d,w)->{
                 try{
                     if(w==0) showThemeStoreFree();
-                    else if(w==1) showColorPicker();
-                    else if(w==2) pickWallpaper();
-                    else if(w==3) showIconPack();
-                    else if(w==4) showFontPicker();
-                    else if(w==5){ if(wallpaperView!=null) wallpaperView.setImageDrawable(null); prefs.edit().remove("wall_uri").apply(); Toast.makeText(this,"Fond efface",0).show(); }
+                    else if(w==1) scanWidgetsFromAnyThemeApp();
+                    else if(w==2) showColorPicker();
+                    else if(w==3) pickWallpaper();
+                    else if(w==4) showIconPack();
+                    else if(w==5) showFontPicker();
+                    else if(w==6){ if(wallpaperView!=null) wallpaperView.setImageDrawable(null); prefs.edit().remove("wall_uri").apply(); Toast.makeText(this,"Fond efface",0).show(); }
                 }catch(Exception e){}
             }).show();
         }catch(Exception e){}
