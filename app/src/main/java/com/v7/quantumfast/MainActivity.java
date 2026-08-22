@@ -224,11 +224,26 @@ public class MainActivity extends Activity {
                 if(info!=null){
                     android.appwidget.AppWidgetHostView hv=widgetHost.createView(this, id, info);
                     hv.setAppWidget(id, info);
-                    hv.setOnLongClickListener(v->{
-                        new AlertDialog.Builder(this).setTitle("Supprimer widget?").setMessage(info.loadLabel(getPackageManager())).setPositiveButton("Supprimer", (d,w)-> removeWidget(id)).setNegativeButton("Annuler",null).show();
-                        return true;
-                    });
-                    widgetContainer.addView(hv);
+                    // resize options auto
+                    float w=glassPrefs.getFloat("widget_"+id+"_w", info.minWidth);
+                    float h=glassPrefs.getFloat("widget_"+id+"_h", info.minHeight);
+                    try{
+                        Bundle opts=new Bundle();
+                        opts.putInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, (int)w);
+                        opts.putInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, (int)h);
+                        widgetManager.updateAppWidgetOptions(id, opts);
+                    }catch(Exception e){}
+                    DraggableWidgetFrame frame=new DraggableWidgetFrame(this, id);
+                    frame.addView(hv, new FrameLayout.LayoutParams((int)w, (int)h));
+                    frame.enableDrag();
+                    // restore position
+                    float x=glassPrefs.getFloat("widget_"+id+"_x", -1);
+                    float y=glassPrefs.getFloat("widget_"+id+"_y", -1);
+                    if(x!=-1) frame.setX(x);
+                    if(y!=-1) frame.setY(y);
+                    // long press suppr aussi
+                    frame.setOnLongClickListener(v->{ showWidgetOptions(id); return true; });
+                    widgetContainer.addView(frame);
                 }
             }catch(Exception e){}
         }
@@ -388,15 +403,78 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Icon packs").setView(sv).show();
     }
     void showFontPicker(){ Toast.makeText(this,"Polices - bientot",0).show(); }
+    // Wrapper draggable + redimensionnable pour widgets
+    class DraggableWidgetFrame extends FrameLayout {
+        float dX, dY; int lastAction; int widgetId;
+        View resizeHandle;
+        public DraggableWidgetFrame(Context ctx, int wid){ super(ctx); widgetId=wid; }
+        void enableDrag(){
+            setOnTouchListener(new OnTouchListener(){
+                public boolean onTouch(View v, MotionEvent ev){
+                    switch(ev.getAction()){
+                        case MotionEvent.ACTION_DOWN:
+                            dX = getX() - ev.getRawX();
+                            dY = getY() - ev.getRawY();
+                            lastAction = MotionEvent.ACTION_DOWN;
+                            bringToFront();
+                            return true;
+                        case MotionEvent.ACTION_MOVE:
+                            float newX = ev.getRawX() + dX;
+                            float newY = ev.getRawY() + dY;
+                            setX(newX); setY(newY);
+                            lastAction = MotionEvent.ACTION_MOVE;
+                            return true;
+                        case MotionEvent.ACTION_UP:
+                            if(lastAction==MotionEvent.ACTION_MOVE){
+                                // save position
+                                glassPrefs.edit().putFloat("widget_"+widgetId+"_x", getX()).putFloat("widget_"+widgetId+"_y", getY()).apply();
+                            } else {
+                                // tap -> options resize/suppr
+                                showWidgetOptions(widgetId);
+                            }
+                            return true;
+                    }
+                    return false;
+                }
+            });
+        }
+    }
+    void showWidgetOptions(int id){
+        new AlertDialog.Builder(this).setTitle("Widget").setItems(new String[]{"Redimensionner","Deplacer (drag direct)","Supprimer"}, (d,w)->{
+            if(w==0) showResizeDialog(id);
+            else if(w==1) Toast.makeText(this,"Glisse le widget directement sur l'ecran principal",1).show();
+            else if(w==2) removeWidget(id);
+        }).show();
+    }
+    void showResizeDialog(int id){
+        try{
+            android.appwidget.AppWidgetProviderInfo info=widgetManager.getAppWidgetInfo(id);
+            if(info==null) return;
+            LinearLayout lay=new LinearLayout(this); lay.setOrientation(LinearLayout.VERTICAL); lay.setPadding(30,20,30,20);
+            TextView t=new TextView(this); t.setText("Largeur / Hauteur en dp (comme launcher systeme)"); t.setTextColor(Color.WHITE); lay.addView(t);
+            SeekBar wBar=new SeekBar(this); wBar.setMax(500); wBar.setProgress((int)glassPrefs.getFloat("widget_"+id+"_w", info.minWidth)); lay.addView(wBar);
+            SeekBar hBar=new SeekBar(this); hBar.setMax(800); hBar.setProgress((int)glassPrefs.getFloat("widget_"+id+"_h", info.minHeight)); lay.addView(hBar);
+            TextView infoT=new TextView(this); infoT.setText("Glisse pour redimensionner, comme launcher systeme"); infoT.setTextColor(Color.LTGRAY); lay.addView(infoT);
+            new AlertDialog.Builder(this).setTitle("Redimensionner widget").setView(lay).setPositiveButton("Appliquer",(dd,ww)->{
+                try{
+                    int newW=wBar.getProgress(); int newH=hBar.getProgress();
+                    glassPrefs.edit().putFloat("widget_"+id+"_w", newW).putFloat("widget_"+id+"_h", newH).apply();
+                    Bundle opts=new Bundle(); opts.putInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, newW); opts.putInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, newH);
+                    opts.putInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, newW); opts.putInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, newH);
+                    widgetManager.updateAppWidgetOptions(id, opts);
+                    loadWidgets();
+                }catch(Exception e){}
+            }).setNegativeButton("Annuler",null).show();
+        }catch(Exception e){}
+    }
+
     void showMenu(){
-        new AlertDialog.Builder(this).setTitle("Menu").setItems(new String[]{"Theme Store Gratuit","Widgets (appui long suppr)","Couleur icones","Fond HD","Icon packs","Supprimer tous widgets","Effacer fond"}, (d,w)->{
-            if(w==0) showThemeStoreFree();
-            else if(w==1) scanWidgetsFromAnyThemeApp();
-            else if(w==2) showColorPicker();
-            else if(w==3) pickWallpaper();
-            else if(w==4) showIconPack();
-            else if(w==5){ new AlertDialog.Builder(this).setTitle("Supprimer tous widgets?").setPositiveButton("Oui",(dd,ww)->{ glassPrefs.edit().remove("widget_ids").apply(); if(widgetContainer!=null) widgetContainer.removeAllViews(); Toast.makeText(this,"Widgets supprimes",0).show(); }).show(); }
-            else if(w==6){ if(wallpaperView!=null) wallpaperView.setImageDrawable(null); prefs.edit().remove("wall_uri").apply(); }
+
+        new AlertDialog.Builder(this).setTitle("Menu").setItems(new String[]{"Couleur icones","Fond HD","Icon packs","Effacer fond"}, (d,w)->{
+            if(w==0) showColorPicker();
+            else if(w==1) pickWallpaper();
+            else if(w==2) showIconPack();
+            else if(w==3){ if(wallpaperView!=null) wallpaperView.setImageDrawable(null); prefs.edit().remove("wall_uri").apply(); Toast.makeText(this,"Fond efface",0).show(); }
         }).show();
     }
     void pickWallpaper(){ Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("image/*"); startActivityForResult(i,1001); }
